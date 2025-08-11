@@ -206,8 +206,7 @@ export function CurvedEdge({
         }
         
         .edge-click-area:focus {
-          outline: 2px solid ${GRAPH_STYLES.COLORS.SELECTED_EDGE};
-          outline-offset: 2px;
+          outline: none;
         }
       `}</style>
     </>
