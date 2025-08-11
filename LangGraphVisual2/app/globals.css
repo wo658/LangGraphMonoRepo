@@ -1,0 +1,177 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 94.1%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-slate-50 text-foreground transition-colors;
+  }
+  
+  /* Mermaid-style background */
+  .dark body {
+    @apply bg-slate-900;
+  }
+}
+
+/* Mermaid-style panel styling */
+@layer components {
+  .mermaid-panel {
+    @apply bg-white border border-slate-200 rounded-lg shadow-sm;
+  }
+  
+  .dark .mermaid-panel {
+    @apply bg-slate-800 border-slate-700;
+  }
+  
+  .mermaid-tab {
+    @apply px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors;
+  }
+  
+  .mermaid-tab.active {
+    @apply text-blue-600 bg-blue-50;
+  }
+  
+  .dark .mermaid-tab {
+    @apply text-slate-400 hover:text-slate-100 hover:bg-slate-700;
+  }
+  
+  .dark .mermaid-tab.active {
+    @apply text-blue-400 bg-blue-950;
+  }
+  
+  .mermaid-toolbar {
+    @apply flex items-center gap-2 px-4 py-2 bg-slate-50 border-b border-slate-200;
+  }
+  
+  .dark .mermaid-toolbar {
+    @apply bg-slate-800 border-slate-700;
+  }
+}
+
+/* ReactFlow 다크 모드 커스텀 스타일 */
+.react-flow.dark {
+  background: hsl(var(--background));
+}
+
+.react-flow.dark .react-flow__node {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--card-foreground));
+}
+
+.react-flow.dark .react-flow__node.selected {
+  box-shadow: 0 0 0 2px hsl(var(--primary));
+}
+
+.react-flow.dark .react-flow__edge-path {
+  stroke: hsl(var(--muted-foreground));
+}
+
+.react-flow.dark .react-flow__edge.selected .react-flow__edge-path {
+  stroke: hsl(var(--primary));
+}
+
+.react-flow.dark .react-flow__controls {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+}
+
+.react-flow.dark .react-flow__controls button {
+  background: hsl(var(--card));
+  border-bottom: 1px solid hsl(var(--border));
+  color: hsl(var(--card-foreground));
+}
+
+.react-flow.dark .react-flow__controls button:hover {
+  background: hsl(var(--accent));
+}
+
+.react-flow.dark .react-flow__controls button svg {
+  fill: hsl(var(--card-foreground));
+}
+
+.react-flow.dark .react-flow__controls button:disabled {
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+.react-flow.dark .react-flow__controls button:disabled svg {
+  fill: hsl(var(--muted-foreground));
+}
+
+.react-flow.dark .react-flow__minimap {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+}
+
+.react-flow.dark .react-flow__attribution {
+  background: hsl(var(--card));
+  color: hsl(var(--muted-foreground));
+}
+
+/* 코드 에디터 다크 모드 스타일 */
+.dark textarea {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.dark textarea::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+/* 테마 전환 애니메이션 */
+* {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}

@@ -1,0 +1,29 @@
+{
+  "name": "Documentation Updater",
+  "description": "Automatically updates documentation when source files change",
+  "trigger": {
+    "type": "file",
+    "patterns": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx",
+      "**/*.mjs",
+      "package.json",
+      "tsconfig.json",
+      "next.config.mjs",
+      "tailwind.config.ts",
+      "components.json"
+    ],
+    "exclude": [
+      "node_modules/**",
+      ".next/**",
+      ".git/**",
+      "**/*.d.ts"
+    ]
+  },
+  "action": {
+    "type": "agent",
+    "prompt": "A source file has been modified in this TypeScript/Next.js project. Please review the changes and update the project documentation accordingly. Focus on:\n\n1. If there's a README.md file, update it to reflect any new features, components, or architectural changes\n2. If there's a /docs folder, update relevant documentation files there\n3. Update any inline code comments or JSDoc if needed\n4. Ensure the documentation accurately reflects the current state of the codebase\n\nThe project is a LangGraph Playground - a web-based visualization tool for LangGraph workflows with features like real-time code editing, graph visualization, import/export functionality, and theme support.\n\nPlease be concise and focus on meaningful changes that would help other developers understand the project structure and functionality."
+  }
+}

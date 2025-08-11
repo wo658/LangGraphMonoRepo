@@ -1,0 +1,24 @@
+{
+  "enabled": true,
+  "name": "Code Quality Analyzer",
+  "description": "Monitors source code files for changes and provides automated code quality analysis including code smells detection, design pattern suggestions, and best practices recommendations to improve readability, maintainability, and performance.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "app/**/*.tsx",
+      "app/**/*.ts",
+      "components/**/*.tsx",
+      "components/**/*.ts",
+      "contexts/**/*.tsx",
+      "hooks/**/*.tsx",
+      "hooks/**/*.ts",
+      "lib/**/*.ts",
+      "utils/**/*.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analyze the modified code in the changed files for potential improvements. Focus on:\n\n1. **Code Smells**: Identify any code smells like long functions, duplicate code, complex conditionals, or inappropriate naming\n2. **Design Patterns**: Suggest applicable design patterns that could improve the code structure\n3. **Best Practices**: Check adherence to React/TypeScript/Next.js best practices including:\n   - Proper TypeScript typing\n   - React hooks usage\n   - Component composition\n   - Performance optimizations\n   - Accessibility considerations\n4. **Readability**: Suggest improvements for code clarity and documentation\n5. **Maintainability**: Identify areas that could be refactored for better maintainability\n6. **Performance**: Highlight potential performance bottlenecks and optimization opportunities\n\nProvide specific, actionable suggestions while maintaining the existing functionality. Consider the project's tech stack (Next.js 15, React 19, TypeScript, Tailwind CSS) and structure when making recommendations."
+  }
+}
