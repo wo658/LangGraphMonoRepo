@@ -11,8 +11,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "LangGraph Playground",
-  description: "A minimal playground to visualize LangGraph graphs",
+  title: "LangGraph GUI",
   generator: "v0.dev",
 }
 

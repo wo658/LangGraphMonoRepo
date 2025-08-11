@@ -98,9 +98,9 @@ export const TOAST_CONFIG = {
 
 // Application metadata
 export const APP_CONFIG = {
-  NAME: 'LangGraph Playground',
+  NAME: 'LangGraph GUI',
   VERSION: '1.0.0',
-  DESCRIPTION: 'A minimal playground to visualize LangGraph graphs',
+  DESCRIPTION: 'A minimal GUI to visualize LangGraph graphs',
 } as const
 
 // Translation data - centralized location
@@ -108,7 +108,7 @@ export const TRANSLATIONS = {
   en: {
     // Header
     "app.title": "LangGraph GUI",
-    "app.description": "A minimal playground to visualize LangGraph graphs.",
+    "app.description": "A minimal GUI to visualize LangGraph graphs.",
 
     // Buttons
     "button.run": "Run",

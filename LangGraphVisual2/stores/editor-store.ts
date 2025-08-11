@@ -34,48 +34,81 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   tabSize: 2,
 }
 
-// Default code template
-const DEFAULT_CODE = `# LangGraph 기본 워크플로우
-from langgraph.graph import StateGraph
+// Default code template (통합 예제: 단일 코드에서 조건부 엣지 테스트)
+const DEFAULT_CODE = `# LangGraph 통합 예제: 단일 워크플로우에서 조건부 엣지 테스트
+from langgraph.graph import StateGraph, END
 
-def agent_function(state):
-    # 에이전트 함수 구현
-    return {"result": "처리 완료"}
+# 노드 함수 정의
+def init(state):
+    # 초기화 단계
+    return {**state, "status": "processing"}
 
-def researcher_function(state):
-    # 연구 함수 구현  
-    return {"data": "연구 결과"}
+def process(state):
+    # 처리 단계: 성공/실패/계속 중 하나를 반환하도록 상태를 업데이트
+    # 입력값(result)에 따라 분기합니다.
+    result = state.get("result")
+    if result == "success":
+        return {**state, "status": "success"}
+    elif result == "failure":
+        return {**state, "status": "failure"}
+    else:
+        # 반복을 보고 싶다면 result를 None 또는 다른 값으로 두세요.
+        return {**state, "status": "continue"}
 
-def should_continue(state):
-    # 조건부 로직
-    return "continue" if state.get("continue") else "end"
+def on_success(state):
+    # 성공 처리
+    return state
+
+def on_failure(state):
+    # 실패 처리
+    return state
+
+# 조건 라우팅 함수: 상태에 따라 라벨을 반환
+def route_result(state):
+    status = state.get("status")
+    if status == "success":
+        return "success"
+    if status == "failure":
+        return "failure"
+    return "continue"
 
 # 워크플로우 생성
 workflow = StateGraph()
 
 # 노드 추가
-workflow.add_node("agent", agent_function)
-workflow.add_node("researcher", researcher_function)
-workflow.add_node("final_check", should_continue)
+workflow.add_node("init", init)
+workflow.add_node("process", process)
+workflow.add_node("success", on_success)
+workflow.add_node("failure", on_failure)
 
-# 엣지 추가
-workflow.add_edge(START, "agent")
-workflow.add_edge("agent", "researcher")
+# 엔트리 포인트 설정 (START 대신 사용)
+workflow.set_entry_point("init")
+
+# 직선 엣지
+workflow.add_edge("init", "process")
+
+# 조건부 엣지: process 결과에 따라 분기 (라벨: success, failure, continue)
 workflow.add_conditional_edges(
-    "researcher",
-    should_continue,
+    "process",
+    route_result,
     {
-        "continue": "final_check",
-        "end": END
+        "success": "success",
+        "failure": "failure",
+        "continue": "process"  # 루프백
     }
 )
 
-# Compile the graph
+# 종료 엣지
+workflow.add_edge("success", END)
+workflow.add_edge("failure", END)
+
+# 그래프 컴파일
 graph = workflow.compile()
 
-# Example usage:
-# result = graph.invoke({"topic": "dogs", "joke": ""})
-# print(result)
+# 사용 예시:
+# graph.invoke({"result": "success"})   # success 경로
+# graph.invoke({"result": "failure"})   # failure 경로
+# graph.invoke({})                        # continue 경로(루프)
 `
 
 const initialState = {
