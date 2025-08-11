@@ -329,6 +329,7 @@ function GraphFlow() {
         {...STATIC_REACTFLOW_CONFIG}
         // Override static config
         nodesDraggable={true}
+        nodesConnectable={false}
         minZoom={0.2}
         maxZoom={4}
         elementsSelectable={true}

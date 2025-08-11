@@ -41,6 +41,7 @@ export const useReactFlowData = (graph: LangGraph | null, isDark: boolean) => {
       },
       position: node.position || calculateNodePosition(index, graph.nodes.length),
       draggable: true,
+      connectable: false,
     }))
 
     // Convert LangGraph edges to ReactFlow format with styling
@@ -68,6 +69,7 @@ export const useReactFlowNodes = (graph: LangGraph | null) => {
       },
       position: node.position || calculateNodePosition(index, graph.nodes.length),
       draggable: true,
+      connectable: false,
     }))
   }, [graph])
 }

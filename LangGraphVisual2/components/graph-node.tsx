@@ -17,11 +17,11 @@ interface GraphNodeProps {
   selected: boolean
 }
 
-// Handle configuration - extracted for reusability and performance
+// Handle configuration (kept for edge anchoring) - will be invisible and non-interactive
 const HANDLE_CONFIG = {
-  BASE_CLASSES: "w-3 h-3 border-2 border-white transition-transform hover:scale-110",
-  TARGET_CLASSES: "!bg-blue-500",
-  SOURCE_CLASSES: "!bg-green-500",
+  BASE_CLASSES: "w-3 h-3 border-2 border-white",
+  TARGET_CLASSES: "!bg-transparent",
+  SOURCE_CLASSES: "!bg-transparent",
   POSITIONS: {
     TOP: { top: -6, left: '50%', transform: 'translateX(-50%)' },
     RIGHT: { right: -6, top: '50%', transform: 'translateY(-50%)' },
@@ -30,7 +30,7 @@ const HANDLE_CONFIG = {
   }
 } as const
 
-// Pre-defined handle configurations for better performance
+// Pre-defined handle configurations (ids must stay stable for existing edges)
 const HANDLE_DEFINITIONS = [
   { id: "top-source", type: "source" as const, position: Position.Top, style: HANDLE_CONFIG.POSITIONS.TOP, ariaLabel: "Top source connection point" },
   { id: "top", type: "target" as const, position: Position.Top, style: HANDLE_CONFIG.POSITIONS.TOP, ariaLabel: "Top target connection point" },
@@ -61,7 +61,8 @@ function NodeHandle({ id, type, position, style, ariaLabel }: NodeHandleProps) {
       type={type}
       position={position}
       className={className}
-      style={style}
+      // invisible and non-interactive, but present in DOM so edges can anchor
+      style={{ ...style, opacity: 0, pointerEvents: 'none' }}
       aria-label={ariaLabel}
     />
   )
@@ -120,7 +121,7 @@ export function GraphNode({ id, data, selected }: GraphNodeProps) {
       aria-pressed={selected}
       aria-describedby={`node-${data.label.replace(/\s+/g, '-').toLowerCase()}-description`}
     >
-      {/* Connection handles for all four directions */}
+      {/* Invisible, non-interactive handles for edge anchoring */}
       {HANDLE_DEFINITIONS.map((handleDef) => (
         <NodeHandle
           key={handleDef.id}
