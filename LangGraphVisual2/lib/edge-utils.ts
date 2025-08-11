@@ -268,7 +268,8 @@ export function createStyledEdge(
   const isLoopFeedback = edge.isLoopFeedback || false
   const baseStroke = isDark ? EDGE_COLORS.base.dark : EDGE_COLORS.base.light
   const loopFeedbackStroke = EDGE_COLORS.loopFeedback
-
+  const isConditional = !!(edge.label && edge.label.trim() !== '')
+  
   const sourceNode = nodes.find(n => n.id === edge.source)
   const targetNode = nodes.find(n => n.id === edge.target)
 
@@ -305,7 +306,8 @@ export function createStyledEdge(
     style: {
       stroke: isLoopFeedback ? loopFeedbackStroke : baseStroke,
       strokeWidth: isLoopFeedback ? 3 : 2,
-      strokeDasharray: isLoopFeedback ? "8 4" : undefined,
+      // Use dashed style for conditional edges; keep solid for normal
+      strokeDasharray: isLoopFeedback ? "8 4" : (isConditional ? "6 3" : undefined),
       strokeLinecap: 'round' as const,
       strokeLinejoin: 'round' as const,
     },

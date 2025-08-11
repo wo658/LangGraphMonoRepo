@@ -1,46 +1,57 @@
 // TypeScript and JavaScript LangGraph code snippets
 export const typescriptSnippets = {
-  basic: `// Basic TypeScript LangGraph Workflow
+  basic: `// Basic TypeScript LangGraph with Conditional Edges
 import { StateGraph } from "langgraph"
 
 // Define the state interface
 interface WorkflowState {
-  messages: string[]
-  currentStep: string
+  input: string
+  status: "start" | "processing" | "success" | "failure"
 }
 
 // Create workflow
 const workflow = new StateGraph(WorkflowState)
 
-// Define node functions
-const agent = async (state: WorkflowState) => {
-  console.log("Agent processing:", state)
-  return { ...state, currentStep: "agent" }
+// Node functions
+const start = async (state: WorkflowState) => {
+  return { ...state, status: "processing" as const }
 }
 
-const researcher = async (state: WorkflowState) => {
-  console.log("Researcher analyzing:", state)
-  return { ...state, currentStep: "researcher" }
+const process = async (state: WorkflowState) => {
+  // Simulate processing result
+  const ok = Math.random() > 0.5
+  return { ...state, status: ok ? "success" as const : "failure" as const }
 }
 
-const finalCheck = async (state: WorkflowState) => {
-  console.log("Final check:", state)
-  return { ...state, currentStep: "complete" }
+// Routing function that produces labeled conditional edges
+const decide = (state: WorkflowState) => {
+  if (state.status === "success") return "success"
+  if (state.status === "failure") return "failure"
+  return "continue"
 }
 
-// Add nodes
-workflow.addNode("agent", agent)
-workflow.addNode("researcher", researcher)
-workflow.addNode("final_check", finalCheck)
+// Terminal handlers
+const onSuccess = async (state: WorkflowState) => state
+const onFailure = async (state: WorkflowState) => state
 
-// Add edges
-workflow.addEdge("START", "agent")
-workflow.addEdge("agent", "researcher")
-workflow.addEdge("researcher", "final_check")
-workflow.addEdge("final_check", "END")
+// Build the graph
+workflow.addNode("start", start)
+workflow.addNode("process", process)
+workflow.addNode("success", onSuccess)
+workflow.addNode("failure", onFailure)
 
-// Set entry point
-workflow.setEntryPoint("agent")
+workflow.addEdge("START", "start")
+workflow.addEdge("start", "process")
+
+// Conditional edges from process (labels: success, failure, continue)
+workflow.addConditionalEdges("process", decide, {
+  "success": "success",
+  "failure": "failure",
+  "continue": "process"
+})
+
+workflow.addEdge("success", "END")
+workflow.addEdge("failure", "END")
 
 export default workflow`,
 

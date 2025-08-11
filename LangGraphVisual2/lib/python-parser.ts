@@ -230,9 +230,23 @@ function extractConditionalEdges(
 
     try {
         while ((conditionalMatch = REGEX_PATTERNS.CONDITIONAL_EDGE.exec(code)) !== null) {
-            const source = conditionalMatch[2]
-            const conditionFunction = conditionalMatch[3]?.trim()
-            const mappingStr = conditionalMatch[4]
+            if (!conditionalMatch[2]) {
+                logger.debug('Skipping conditional edge with missing arguments')
+                continue
+            }
+
+            // Extract arguments from the captured arguments string
+            const argsString = conditionalMatch[2]
+            const args = extractArguments(`(${argsString})`)
+
+            if (args.length < 3) {
+                logger.debug('Skipping conditional edge with insufficient arguments')
+                continue
+            }
+
+            const source = normalizeNodeName(cleanIdentifier(args[0]))
+            const conditionFunction = cleanIdentifier(args[1])
+            const mappingStr = args[2]
 
             if (!conditionFunction || !source || !mappingStr) {
                 logger.debug('Skipping conditional edge with missing data')
@@ -258,9 +272,11 @@ function extractConditionalEdges(
 
             // Parse mapping dictionary
             let mappingMatch: RegexMatch
+            // Reset regex state before parsing a new mapping string
+            REGEX_PATTERNS.MAPPING.lastIndex = 0
             while ((mappingMatch = REGEX_PATTERNS.MAPPING.exec(mappingStr)) !== null) {
                 const condition = mappingMatch[1]
-                const target = mappingMatch[2] || mappingMatch[3]
+                const target = cleanIdentifier(mappingMatch[2])
 
                 if (!condition || !target) {
                     logger.debug('Skipping mapping with missing condition or target')
