@@ -137,6 +137,10 @@ function GraphFlow() {
   const handleNodeClick = useCallback((event: React.MouseEvent, node: any) => {
     event.stopPropagation() // Prevent pane click
     
+    // In add-edge mode, only react if center connector was clicked
+    const targetEl = event.target as HTMLElement
+    const clickedCenter = targetEl.closest('[data-center-connector="true"]')
+    
     const nodeId = node.id
     const nodeLabel = node.data?.label || nodeId
     
@@ -144,6 +148,10 @@ function GraphFlow() {
       // Select mode - select the clicked node
       selectNode(nodeId)
     } else if (editingMode === 'add-edge') {
+      // Ignore clicks that are not on the center connector
+      if (!clickedCenter) {
+        return
+      }
       // Add edge mode - handle connection logic
       if (!edgeConnection.isConnecting) {
         // First click - select source node
@@ -191,6 +199,14 @@ function GraphFlow() {
 
   // Handle keyboard events for deletion
   const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      // Cancel in-progress edge connection
+      if (editingMode === 'add-edge' && edgeConnection.isConnecting) {
+        event.preventDefault()
+        resetConnectionState()
+        return
+      }
+    }
     if (event.key === 'Delete' || event.key === 'Backspace') {
       event.preventDefault()
       if (selectedEdgeId) {
@@ -205,7 +221,7 @@ function GraphFlow() {
         markChanges()
       }
     }
-  }, [selectedEdgeId, selectedNodeId, removeEdge, removeNode, selectEdge, selectNode, markChanges])
+  }, [selectedEdgeId, selectedNodeId, removeEdge, removeNode, selectEdge, selectNode, markChanges, editingMode, edgeConnection.isConnecting, resetConnectionState])
 
   // Handle node creation
   const handleCreateNode = useCallback((nodeName: string) => {

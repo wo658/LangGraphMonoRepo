@@ -145,6 +145,22 @@ export function GraphNode({ id, data, selected }: GraphNodeProps) {
           Node type: {data.nodeType}
         </div>
       )}
+
+      {/* Center connector for click-to-connect in Add Edge mode */}
+      <div
+        className="absolute inset-0 flex items-center justify-center pointer-events-none"
+        data-center-connector="true"
+        aria-hidden={editingMode !== 'add-edge'}
+      >
+        <span
+          data-center-connector="true"
+          className={`transition-all rounded-full border ${editingMode === 'add-edge' ? 'pointer-events-auto w-4 h-4 bg-blue-500/70 border-white shadow-lg hover:scale-110 focus:outline-none focus:ring-2 ring-offset-2 ring-blue-400' : 'w-0 h-0 opacity-0'}`}
+          title={editingMode === 'add-edge' ? 'Click to connect' : undefined}
+          role="button"
+          tabIndex={editingMode === 'add-edge' ? 0 : -1}
+          aria-label={`Center connector for ${data.label}`}
+        />
+      </div>
     </div>
   )
 }

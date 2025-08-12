@@ -99,18 +99,9 @@ export function isValidConnection(
   if (sourceNodeId === targetNodeId) {
     return false
   }
-  
-  // Check if connection already exists
-  const connectionExists = existingEdges.some(
-    edge => edge.source === sourceNodeId && edge.target === targetNodeId
-  )
-  
-  if (connectionExists) {
-    return false
-  }
-  
-  // Add more validation rules as needed
-  // For example: type-based restrictions, max connections, etc.
-  
+
+  // Allow multiple edges between the same node pair (duplicates permitted)
+  // Additional validation rules can be added here as needed.
+
   return true
 }

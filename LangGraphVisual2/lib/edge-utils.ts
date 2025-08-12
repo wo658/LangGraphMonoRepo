@@ -161,14 +161,38 @@ export interface EdgeWithCurvature {
   targetPoint: ConnectionPoint
 }
 
+// 동일 소스/타겟/핸들 간 평행 간선에 대한 곡률 분배 시퀀스 생성
+function generateParallelCurvatures(count: number): number[] {
+  // 단일 간선은 직선 유지
+  if (count <= 0) return []
+  if (count === 1) return [0]
+  // 대칭 분배: 홀수 개일 경우 중앙 0 배치 후 ±로 교차 증가
+  const seq: number[] = []
+  let magnitude = 0.2
+  if (count % 2 === 1) {
+    seq.push(0)
+  }
+  while (seq.length < count) {
+    const m = Math.min(0.8, +magnitude.toFixed(2))
+    if (seq.length < count) seq.push(m)
+    if (seq.length < count) seq.push(-m)
+    magnitude = Math.min(0.8, +(magnitude + 0.15).toFixed(2))
+  }
+  return seq
+}
+
 // 모든 엣지의 충돌 회피 곡률을 계산하는 메인 함수
 export function calculateEdgeCurvatures(edges: GraphEdge[], nodes: Node[]): EdgeWithCurvature[] {
-  // 1. 노드간 거리를 기준으로 엣지 정렬
+  // 1. 노드간 거리를 기준으로 엣지 정렬 + 연결 포인트 계산
+  const handleByEdgeId = new Map<string, { s: string; t: string }>()
   const edgesWithDistance = edges.map(edge => {
     const sourceNode = nodes.find(n => n.id === edge.source)
     const targetNode = nodes.find(n => n.id === edge.target)
-    
+
     if (!sourceNode || !targetNode) {
+      const s = edge.sourceHandle ?? 'right-source'
+      const t = edge.targetHandle ?? 'left'
+      handleByEdgeId.set(edge.id, { s, t })
       return {
         edge,
         distance: Infinity,
@@ -177,18 +201,23 @@ export function calculateEdgeCurvatures(edges: GraphEdge[], nodes: Node[]): Edge
         targetPoint: { id: 'left', position: 'left' as const, x: 0, y: 0 }
       }
     }
-    
+
     const connectionPoints = getOptimalConnectionPoints(sourceNode, targetNode)
     const sourcePoints = getNodeConnectionPoints(sourceNode)
     const targetPoints = getNodeConnectionPoints(targetNode)
-    
-    // sourceHandle에서 '-source' 부분을 제거하여 실제 연결점 ID를 찾음
-    const sourcePointId = connectionPoints.sourceHandle.replace('-source', '')
+
+    // 실제 핸들이 지정되어 있으면 그것을 사용하고, 없으면 최적 핸들을 사용
+    const sHandleId = edge.sourceHandle ?? connectionPoints.sourceHandle
+    const tHandleId = edge.targetHandle ?? connectionPoints.targetHandle
+    handleByEdgeId.set(edge.id, { s: sHandleId, t: tHandleId })
+
+    // sourceHandle에서 '-source' 제거하여 실제 연결점 ID 사용
+    const sourcePointId = sHandleId.replace('-source', '')
     const sourcePoint = sourcePoints.find(p => p.id === sourcePointId)!
-    const targetPoint = targetPoints.find(p => p.id === connectionPoints.targetHandle)!
-    
+    const targetPoint = targetPoints.find(p => p.id === tHandleId)!
+
     const distance = calculateDistance(sourcePoint, targetPoint)
-    
+
     return {
       edge,
       distance,
@@ -198,63 +227,32 @@ export function calculateEdgeCurvatures(edges: GraphEdge[], nodes: Node[]): Edge
     }
   }).sort((a, b) => a.distance - b.distance)
 
-  // 2. 짧은 엣지부터 처리하여 곡률 결정
-  const processedEdges: EdgeWithCurvature[] = []
-  
-  for (const currentEdge of edgesWithDistance) {
-    let finalCurvature = 0
-    let attempts = 0
-    const maxAttempts = 5
-    
-    // 3. 충돌 검사 및 곡률 조정 (최대 5번 시도)
-    while (attempts < maxAttempts) {
-      const testCurvature = attempts * 0.2 // 0, 0.2, 0.4, 0.6, 0.8
-      let hasCollision = false
-      
-      // 다른 노드와의 충돌 검사
-      for (const node of nodes) {
-        if (node.id === currentEdge.edge.source || node.id === currentEdge.edge.target) continue
-        
-        if (checkEdgeNodeCollision(currentEdge.sourcePoint, currentEdge.targetPoint, node)) {
-          hasCollision = true
-          break
-        }
-      }
-      
-      // 이미 처리된 엣지와의 충돌 검사 (attempts < 5일 때만)
-      if (!hasCollision && attempts < maxAttempts - 1) {
-        for (const processedEdge of processedEdges) {
-          if (checkEdgeEdgeCollision(
-            currentEdge.sourcePoint,
-            currentEdge.targetPoint,
-            processedEdge.sourcePoint,
-            processedEdge.targetPoint
-          )) {
-            hasCollision = true
-            break
-          }
-        }
-      }
-      
-      if (!hasCollision) {
-        finalCurvature = testCurvature
-        break
-      }
-      
-      attempts++
-    }
-    
-    // 3-2. 5번 시도 후에도 충돌하면 최대 곡률 적용
-    if (attempts === maxAttempts) {
-      finalCurvature = 0.8
-    }
-    
-    processedEdges.push({
-      ...currentEdge,
-      curvature: finalCurvature
-    })
+  // 1-2. 방향/핸들을 포함한 조합 단위로 그룹핑하여 곡률 베이스 분배
+  const groupMap = new Map<string, string[]>() // key (source|sHandle|target|tHandle) -> edgeIds
+  for (const item of edgesWithDistance) {
+    const h = handleByEdgeId.get(item.edge.id)
+    const s = h?.s ?? 'right-source'
+    const t = h?.t ?? 'left'
+    const key = `${item.edge.source}|${s}|${item.edge.target}|${t}`
+    const list = groupMap.get(key) ?? []
+    list.push(item.edge.id)
+    groupMap.set(key, list)
   }
-  
+
+  const baselineCurvatureByEdgeId = new Map<string, number>()
+  for (const [_, edgeIds] of groupMap.entries()) {
+    // 안정적 분배를 위해 id 정렬
+    const ids = [...edgeIds].sort()
+    const baselines = generateParallelCurvatures(ids.length)
+    ids.forEach((id, idx) => baselineCurvatureByEdgeId.set(id, baselines[idx]))
+  }
+
+  // 2. 각 엣지에 그룹에서 할당된 곡률을 적용 (충돌 검사 생략)
+  const processedEdges: EdgeWithCurvature[] = edgesWithDistance.map(item => ({
+    ...item,
+    curvature: baselineCurvatureByEdgeId.get(item.edge.id) ?? 0
+  }))
+
   return processedEdges
 }
 
