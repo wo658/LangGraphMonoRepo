@@ -16,23 +16,23 @@ const TS_PATTERNS = {
     // const workflow = new StateGraph(State)
     STATE_GRAPH: /(?:const|let|var)\s+(\w+)\s*=\s*new\s+StateGraph\s*\(/g,
     
-    // workflow.addNode("agent", agentFunction)
-    ADD_NODE: /(\w+)\.addNode\s*\(\s*["'`]([^"'`]+)["'`]\s*,?\s*([^)]*)\)/g,
+    // workflow.addNode("agent", agentFunction) or addNode(WorkflowNodes.AGENT, ...)
+    ADD_NODE: /(\w+)\.addNode\s*\(\s*((?:"[^"]+"|'[^']+'|`[^`]+`)|\w+(?:\.\w+)*)\s*,?\s*([^)]+)\)/g,
     
-    // workflow.addEdge("agent", "researcher")
-    ADD_EDGE: /(\w+)\.addEdge\s*\(\s*["'`]([^"'`]+)["'`]\s*,\s*["'`]([^"'`]+)["'`]\s*\)/g,
+    // workflow.addEdge("agent", "researcher") or addEdge(WorkflowNodes.AGENT, WorkflowNodes.RESEARCHER)
+    ADD_EDGE: /(\w+)\.addEdge\s*\(\s*((?:"[^"]+"|'[^']+'|`[^`]+`)|\w+(?:\.\w+)*)\s*,\s*((?:"[^"]+"|'[^']+'|`[^`]+`)|\w+(?:\.\w+)*)\s*\)/g,
     
-    // workflow.addConditionalEdges("agent", condition, { ... })
-    ADD_CONDITIONAL: /(\w+)\.addConditionalEdges\s*\(\s*["'`]([^"'`]+)["'`]\s*,\s*([^,]+),\s*\{([^}]+)\}/g,
+    // workflow.addConditionalEdges("agent", condition, { ... }) or enum-like source
+    ADD_CONDITIONAL: /(\w+)\.addConditionalEdges\s*\(\s*((?:"[^"]+"|'[^']+'|`[^`]+`)|\w+(?:\.\w+)*)\s*,\s*([^,]+),\s*\{([^}]+)\}/g,
     
-    // workflow.setEntryPoint("agent")
-    SET_ENTRY: /(\w+)\.setEntryPoint\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/g,
+    // workflow.setEntryPoint("agent") or enum-like
+    SET_ENTRY: /(\w+)\.setEntryPoint\s*\(\s*((?:"[^"]+"|'[^']+'|`[^`]+`)|\w+(?:\.\w+)*)\s*\)/g,
     
     // START, END constants
     START_END: /(?:START|END|REACT_AGENT_BEGIN|REACT_AGENT_END)/g,
     
-    // Object mapping for conditional edges: "continue": "researcher"
-    MAPPING: /["'`]([^"'`]+)["'`]\s*:\s*["'`]([^"'`]+)["'`]/g,
+    // Object mapping for conditional edges: "continue": "researcher" or RouteDecision.CONTINUE: WorkflowNodes.RESEARCHER
+    MAPPING: /((?:"[^"]+"|'[^']+'|`[^`]+`|\w+(?:\.\w+)*))\s*:\s*((?:"[^"]+"|'[^']+'|`[^`]+`|\w+(?:\.\w+)*))/g,
 } as const
 
 /**
@@ -55,6 +55,12 @@ function cleanIdentifier(identifier: string): string {
     // Handle template literals ${...}
     if (cleaned.includes('${')) {
         cleaned = cleaned.replace(/\$\{[^}]+\}/g, 'var')
+    }
+
+    // Handle enum-like dotted identifiers: WorkflowNodes.EXTRACT_INFO -> EXTRACT_INFO
+    if (cleaned.includes('.')) {
+        const parts = cleaned.split('.')
+        cleaned = parts[parts.length - 1]
     }
     
     return cleaned
@@ -161,7 +167,7 @@ function extractConditionalEdges(
         TS_PATTERNS.MAPPING.lastIndex = 0
         
         while ((mappingMatch = TS_PATTERNS.MAPPING.exec(mappingStr)) !== null) {
-            const condition = mappingMatch[1]
+            const condition = cleanIdentifier(mappingMatch[1])
             const target = cleanIdentifier(mappingMatch[2])
             
             if (condition && target) {

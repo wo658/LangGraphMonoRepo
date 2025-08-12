@@ -118,7 +118,9 @@ const REGEX_PATTERNS = {
     DIRECT_EDGE: /(\w+)\.add_edge\(([^)]+)\)/g,
     CONDITIONAL_EDGE: /(\w+)\.add_conditional_edges\(([^}]+\}[^)]*)\)/g,
     ENTRY_POINT: /(\w+)\.set_entry_point\(([^)]+)\)/g,
-    MAPPING: /["']([^"']+)["']\s*:\s*([^,}]+)/g,
+    // Support both quoted keys and enum-like identifiers (e.g., RouteDecision.COMPLETE)
+    // Group 1 = key (possibly quoted or dotted), Group 2 = value expression up to next comma or closing brace
+    MAPPING: /((?:"[^"]+"|'[^']+'|\w+(?:\.\w+)*))\s*:\s*([^,}]+)/g,
 } as const
 
 type RegexMatch = RegExpExecArray | null
@@ -275,7 +277,8 @@ function extractConditionalEdges(
             // Reset regex state before parsing a new mapping string
             REGEX_PATTERNS.MAPPING.lastIndex = 0
             while ((mappingMatch = REGEX_PATTERNS.MAPPING.exec(mappingStr)) !== null) {
-                const condition = mappingMatch[1]
+                // Clean key to support enum-like labels (e.g., RouteDecision.COMPLETE -> COMPLETE)
+                const condition = cleanIdentifier(mappingMatch[1])
                 const target = cleanIdentifier(mappingMatch[2])
 
                 if (!condition || !target) {
