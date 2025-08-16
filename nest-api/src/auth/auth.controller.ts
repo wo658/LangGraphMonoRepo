@@ -68,7 +68,6 @@ export class AuthController {
       name: user.name,
       avatarUrl: user.avatarUrl,
       provider: user.provider,
-      aiUsage: user.aiUsage,
     };
   }
 

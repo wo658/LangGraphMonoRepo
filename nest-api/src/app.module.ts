@@ -5,7 +5,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { AiUsageModule } from './ai-usage/ai-usage.module';
 import { AiModule } from './ai/ai.module';
 
 @Module({
@@ -21,7 +20,6 @@ import { AiModule } from './ai/ai.module';
     }),
     AuthModule,
     UsersModule,
-    AiUsageModule,
     AiModule,
   ],
   controllers: [AppController],

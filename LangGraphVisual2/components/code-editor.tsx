@@ -5,7 +5,10 @@ import { useTheme } from 'next-themes'
 import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Play, Minimize2, Settings, Code2 } from 'lucide-react'
+import { Play, Minimize2, Settings, Code2, Sparkles } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { API_BASE_URL } from '@/lib/api'
 import { pythonSnippets } from '@/utils/python-snippets'
 import { typescriptSnippets } from '@/utils/typescript-snippets'
 import { useLanguage, useEditorActions } from '@/stores/editor-store'
@@ -110,6 +113,11 @@ export function CodeEditor({
   const { setLanguage } = useEditorActions()
   const [mounted, setMounted] = useState(false)
   const [showExamples, setShowExamples] = useState(false)
+  const [aiOpen, setAiOpen] = useState(false)
+  const [aiInstruction, setAiInstruction] = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiResult, setAiResult] = useState<string | null>(null)
+  const [aiError, setAiError] = useState<string | null>(null)
   const editorRef = useRef<any>(null)
   const examplesRef = useRef<HTMLDivElement>(null)
   const lastDetectedLanguage = useRef<string>('')
@@ -118,6 +126,47 @@ export function CodeEditor({
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  const handleAIOpen = useCallback(() => {
+    setAiOpen(true)
+    setAiInstruction('')
+    setAiResult(null)
+    setAiError(null)
+  }, [])
+
+  const handleAIGenerate = useCallback(async () => {
+    if (!aiInstruction.trim()) {
+      setAiError('Instruction is required')
+      return
+    }
+    setAiLoading(true)
+    setAiError(null)
+    setAiResult(null)
+    try {
+      const res = await fetch(`${API_BASE_URL}/ai/generate`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language,
+          instruction: aiInstruction,
+          code: value,
+          stream: false,
+        }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        const msg = (data && (data.message || data.error)) || `Request failed: ${res.status}`
+        setAiError(msg)
+        return
+      }
+      setAiResult((data && data.message) || '')
+    } catch (e: any) {
+      setAiError(e?.message || 'Network error')
+    } finally {
+      setAiLoading(false)
+    }
+  }, [aiInstruction, language, value])
 
   // 언어 변경 핸들러 메모이제이션
   const handleLanguageChange = useCallback((value: 'python' | 'typescript' | 'javascript') => {
@@ -467,6 +516,16 @@ declare global {
         
         <div className="flex items-center space-x-2 relative">
           <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleAIOpen}
+            className="h-7 px-2 text-xs"
+            title="AI Generate (open dialog)"
+          >
+            <Sparkles className="w-3 h-3 mr-1" />
+            AI Generate
+          </Button>
+          <Button
             variant="ghost" 
             size="sm"
             onClick={() => setShowExamples(!showExamples)}
@@ -581,6 +640,60 @@ declare global {
           }
         />
       </div>
+
+      {/* AI Generate Dialog */}
+      <Dialog open={aiOpen} onOpenChange={setAiOpen}>
+        <DialogContent className="sm:max-w-[700px]">
+          <DialogHeader>
+            <DialogTitle>AI Generate</DialogTitle>
+            <DialogDescription>
+              Describe how the current code should be modified. The selected language is <b>{language}</b>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="ai-instruction">Instruction</Label>
+              <textarea
+                id="ai-instruction"
+                className="w-full min-h-[120px] p-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm"
+                value={aiInstruction}
+                onChange={(e) => setAiInstruction(e.target.value)}
+                placeholder="e.g., Refactor to use LangGraph StateGraph with conditional edges and add proper typing."
+              />
+              {aiError && (
+                <p className="text-sm text-red-600 dark:text-red-400">{aiError}</p>
+              )}
+            </div>
+
+            {aiResult && (
+              <div className="space-y-2">
+                <Label>Result</Label>
+                <pre className="whitespace-pre-wrap text-xs p-3 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 max-h-[300px] overflow-auto">
+{aiResult}
+                </pre>
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => { onChange(aiResult); setAiOpen(false) }}
+                  >
+                    Apply to editor
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="outline" onClick={() => setAiOpen(false)}>
+                Close
+              </Button>
+              <Button type="button" onClick={handleAIGenerate} disabled={aiLoading}>
+                {aiLoading ? 'Generating...' : 'Generate'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
