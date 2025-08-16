@@ -36,8 +36,7 @@ export class OpenRouterService {
       apiKey,
       baseURL: this.baseURL,
       defaultHeaders: {
-        // OpenRouter recommends Referer and X-Title headers
-        'Referer': this.siteUrl,
+        // Match OpenRouter example headers
         'HTTP-Referer': this.siteUrl,
         'X-Title': this.appName,
       },
@@ -49,7 +48,7 @@ export class OpenRouterService {
     options: ChatCompletionOptions = {},
   ): Promise<ChatCompletionResult> {
     try {
-      const model = options.model || process.env.AI_MODEL || 'qwen-2.5-coder-32b-instruct';
+      const model = options.model || process.env.AI_MODEL || 'qwen/qwen-2.5-coder-32b-instruct';
       const temperature = options.temperature ?? 0.2;
       const max_tokens = options.max_tokens ?? 2048;
 

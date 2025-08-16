@@ -78,7 +78,7 @@ export class AiController {
     ];
 
     const result = await this.openRouter.createChatCompletion(messages, {
-      model: process.env.AI_MODEL || 'qwen-2.5-coder-32b-instruct',
+      model: process.env.AI_MODEL || 'qwen/qwen-2.5-coder-32b-instruct',
       temperature: 0.2,
       max_tokens: 2048,
     });
