@@ -2,6 +2,7 @@
 
 import { Moon, Sun, Globe } from "lucide-react"
 import { useTheme } from "next-themes"
+import { useEffect } from "react"
 
 import { Button } from "@/components/ui/button"
 
@@ -17,6 +18,8 @@ import { useLanguage, useLanguageActions } from '@/stores/i18n-store'
 import { useI18n } from '@/stores/i18n-store'
 import { ImportExportButtons } from "@/components/import-export-buttons"
 import type { LangGraph } from "@/lib/types"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { useAuth, useAuthActions } from "@/stores/auth-store"
 
 interface AppHeaderProps {
   onImport: (data: { graph: LangGraph; code: string }) => void
@@ -25,10 +28,18 @@ interface AppHeaderProps {
 export function AppHeader({ onImport }: AppHeaderProps) {
   const { theme, setTheme } = useTheme()
   const { language, setLanguage, t } = useI18n()
+  const { user, loading } = useAuth()
+  const { loadMe, logout, loginWithGithub, loginWithGoogle } = useAuthActions()
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark")
   }
+  
+  // Load session on mount
+  useEffect(() => {
+    loadMe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="flex-shrink-0 px-6 py-4">
@@ -72,6 +83,47 @@ export function AppHeader({ onImport }: AppHeaderProps) {
             <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             <span className="sr-only">Toggle theme</span>
           </Button>
+
+          {/* Auth Controls (rightmost) */}
+          {loading ? (
+            <span className="text-sm text-slate-500">Loading...</span>
+          ) : user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="px-1">
+                  <Avatar className="h-7 w-7">
+                    {user.avatarUrl ? (
+                      <AvatarImage src={user.avatarUrl} alt={user.name || user.email} />
+                    ) : (
+                      <AvatarFallback>{(user.name || user.email || 'U').charAt(0).toUpperCase()}</AvatarFallback>
+                    )}
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col">
+                    <span className="text-sm">Signed in as</span>
+                    <span className="text-xs text-slate-500 truncate max-w-[220px]">{user.name || user.email}</span>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => logout()}>Logout</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">Sign in</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Continue with</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={loginWithGithub}>GitHub</DropdownMenuItem>
+                <DropdownMenuItem onClick={loginWithGoogle}>Google</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
     </div>
