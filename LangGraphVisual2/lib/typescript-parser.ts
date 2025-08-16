@@ -11,13 +11,17 @@ const logger = {
     }
 }
 
+ 
+
 // TypeScript/JavaScript LangGraph patterns
 const TS_PATTERNS = {
     // const workflow = new StateGraph(State)
     STATE_GRAPH: /(?:const|let|var)\s+(\w+)\s*=\s*new\s+StateGraph\s*\(/g,
     
     // workflow.addNode("agent", agentFunction) or addNode(WorkflowNodes.AGENT, ...)
-    ADD_NODE: /(\w+)\.addNode\s*\(\s*((?:"[^"]+"|'[^']+'|`[^`]+`)|\w+(?:\.\w+)*)\s*,?\s*([^)]+)\)/g,
+    ADD_NODE: /(\w+)\.addNode\s*\(\s*((?:"[^"]+"|'[^']+'|`[^`]+`)|\w+(?:\.\w+)*)\s*,?\s*[^)]*\)/g,
+    // workflow.addNode(variable)
+    ADD_NODE_SINGLE: /(\w+)\.addNode\s*\(\s*(\w+(?:\.\w+)*)\s*\)/g,
     
     // workflow.addEdge("agent", "researcher") or addEdge(WorkflowNodes.AGENT, WorkflowNodes.RESEARCHER)
     ADD_EDGE: /(\w+)\.addEdge\s*\(\s*((?:"[^"]+"|'[^']+'|`[^`]+`)|\w+(?:\.\w+)*)\s*,\s*((?:"[^"]+"|'[^']+'|`[^`]+`)|\w+(?:\.\w+)*)\s*\)/g,
@@ -74,20 +78,33 @@ function extractNodes(code: string): { nodes: ParsedNode[], nodeSet: Set<string>
     const nodeSet = new Set<string>()
     let match: RegExpExecArray | null
     
+    // Build a map from variable name -> { id, name }
+    const varToNode: Record<string, { id: string, name?: string }> = {}
+    try {
+        const declRegex = /(?:const|let|var)\s+(\w+)[^=]*=\s*\{[^}]*\bid\s*:\s*("[^"]+"|'[^']+'|`[^`]+`)[^}]*?(?:\bname\s*:\s*("[^"]+"|'[^']+'|`[^`]+`))?[^}]*\}/g
+        let dMatch: RegExpExecArray | null
+        while ((dMatch = declRegex.exec(code)) !== null) {
+            const varName = dMatch[1]
+            const id = cleanIdentifier(dMatch[2])
+            const name = dMatch[3] ? cleanIdentifier(dMatch[3]) : undefined
+            if (varName && id) {
+                varToNode[varName] = { id, name }
+            }
+        }
+    } catch { /* noop */ }
+    
     // Reset regex
     TS_PATTERNS.ADD_NODE.lastIndex = 0
     
     while ((match = TS_PATTERNS.ADD_NODE.exec(code)) !== null) {
-        const nodeId = cleanIdentifier(match[2])
-        
+        const rawArg = match[2].trim()
+        const varInfo = varToNode[rawArg]
+        const nodeId = varInfo ? varInfo.id : cleanIdentifier(rawArg)
         if (nodeId && !nodeSet.has(nodeId)) {
             nodeSet.add(nodeId)
-            nodes.push({
-                id: nodeId,
-                label: nodeId.charAt(0).toUpperCase() + nodeId.slice(1),
-                type: "default"
-            })
-            logger.debug(`Found node: ${nodeId}`)
+            const label = varInfo?.name || (nodeId.charAt(0).toUpperCase() + nodeId.slice(1))
+            nodes.push({ id: nodeId, label, type: "default" })
+            logger.debug(`Found node via addNode: ${nodeId}`)
         }
     }
     
@@ -118,7 +135,26 @@ function extractDirectEdges(code: string): ParsedEdge[] {
             logger.debug(`Found edge: ${source} -> ${target}`)
         }
     }
-    
+    // Also support literal arrays of edges: [{ from: 'a', to: 'b' }, ...]
+    // and variants using source/target keys
+    try {
+        const objectEdgeRegex = /\{[^}]*\b(?:from|source)\s*:\s*("[^"]+"|'[^']+'|`[^`]+`)[^}]*\b(?:to|target)\s*:\s*("[^"]+"|'[^']+'|`[^`]+`)[^}]*\}/g
+        let objMatch: RegExpExecArray | null
+        while ((objMatch = objectEdgeRegex.exec(code)) !== null) {
+            const objStr = objMatch[0]
+            const fromMatch = /(from|source)\s*:\s*("[^"]+"|'[^']+'|`[^`]+`)/.exec(objStr)
+            const toMatch = /(to|target)\s*:\s*("[^"]+"|'[^']+'|`[^`]+`)/.exec(objStr)
+            const rawFrom = fromMatch?.[2] || ''
+            const rawTo = toMatch?.[2] || ''
+            const source = cleanIdentifier(rawFrom)
+            const target = cleanIdentifier(rawTo)
+            if (source && target) {
+                edges.push({ id: `e${edgeCounter++}`, source, target })
+                logger.debug(`Found literal edge: ${source} -> ${target}`)
+            }
+        }
+    } catch { /* noop */ }
+
     return edges
 }
 

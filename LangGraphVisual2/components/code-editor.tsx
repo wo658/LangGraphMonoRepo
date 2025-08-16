@@ -496,44 +496,61 @@ declare global {
   return (
     <div className={`flex flex-col h-full ${className}`}>
       {/* 헤더 */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
-        <div className="flex items-center space-x-3">
-          <h3 className="text-sm font-semibold">Code Editor</h3>
-          <div className="flex items-center space-x-2">
-            <span className="text-xs text-slate-500 dark:text-slate-400">Language:</span>
-            <Select value={language} onValueChange={handleLanguageChange}>
-              <SelectTrigger className="w-24 h-6 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="python">Python</SelectItem>
-                <SelectItem value="typescript">TypeScript</SelectItem>
-                <SelectItem value="javascript">JavaScript</SelectItem>
-              </SelectContent>
-            </Select>
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+        {/* 첫 번째 줄 - 제목과 언어 선택 */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center space-x-3">
+            <h3 className="text-sm font-semibold">Code Editor</h3>
+            <div className="flex items-center space-x-2">
+              <span className="text-xs text-slate-500 dark:text-slate-400">Language:</span>
+              <Select value={language} onValueChange={handleLanguageChange}>
+                <SelectTrigger className="w-24 h-6 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="python">Python</SelectItem>
+                  <SelectItem value="typescript">TypeScript</SelectItem>
+                  <SelectItem value="javascript">JavaScript</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onMinimize}
+            className="h-7 w-7 p-0"
+            title="Minimize editor"
+          >
+            <Minimize2 className="w-3 h-3" />
+          </Button>
         </div>
         
-        <div className="flex items-center space-x-2 relative">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleAIOpen}
-            className="h-7 px-2 text-xs"
-            title="AI Generate (open dialog)"
-          >
-            <Sparkles className="w-3 h-3 mr-1" />
-            AI Generate
-          </Button>
-          <Button
-            variant="ghost" 
-            size="sm"
-            onClick={() => setShowExamples(!showExamples)}
-            className="h-7 w-7 p-0"
-            title="Load example code"
-          >
-            <Code2 className="w-3 h-3" />
-          </Button>
+        {/* 두 번째 줄 - 액션 버튼들 */}
+        <div className="flex items-center justify-between relative">
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleAIOpen}
+              className="h-7 px-2 text-xs"
+              title="AI Generate (open dialog)"
+            >
+              <Sparkles className="w-3 h-3 mr-1" />
+              AI Generate
+            </Button>
+            <Button
+              variant="ghost" 
+              size="sm"
+              onClick={() => setShowExamples(!showExamples)}
+              className="h-7 w-7 p-0"
+              title="Load example code"
+            >
+              <Code2 className="w-3 h-3" />
+            </Button>
+          </div>
+          
           <Button
             onClick={onRun}
             disabled={isRunning}
@@ -543,15 +560,6 @@ declare global {
           >
             <Play className="w-3 h-3 mr-1" />
             {runButtonText}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onMinimize}
-            className="h-7 w-7 p-0"
-            title="Minimize editor"
-          >
-            <Minimize2 className="w-3 h-3" />
           </Button>
 
           {/* Examples Dropdown */}
