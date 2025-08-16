@@ -1,5 +1,5 @@
 // Centralized language detection utility
-// Detects 'python' | 'typescript' | 'javascript'
+// Detects 'python' | 'typescript'
 
 // Basic JavaScript patterns (when TS types aren’t present)
 const jsPatterns: RegExp[] = [
@@ -20,7 +20,7 @@ const pyPatterns: RegExp[] = [
   /\bStateGraph\b/,
 ]
 
-export function detectLanguage(code: string): 'python' | 'typescript' | 'javascript' {
+export function detectLanguage(code: string): 'python' | 'typescript' {
   const snippet = code.slice(0, 50_000) // limit to avoid pathological cases
 
   // 1) TypeScript patterns
@@ -43,5 +43,6 @@ export function detectLanguage(code: string): 'python' | 'typescript' | 'javascr
   const pyScore = pyPatterns.reduce((s, r) => s + (r.test(snippet) ? 1 : 0), 0)
 
   if (pyScore >= jsScore) return 'python'
-  return 'javascript'
+  // JavaScript 유사 패턴은 TypeScript로 취급
+  return 'typescript'
 }

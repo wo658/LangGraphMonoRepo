@@ -109,7 +109,7 @@ export function CodeEditor({
   }, [aiInstruction, language, value])
 
   // 언어 변경 핸들러 메모이제이션
-  const handleLanguageChange = useCallback((value: 'python' | 'typescript' | 'javascript') => {
+  const handleLanguageChange = useCallback((value: 'python' | 'typescript') => {
     setLanguage(value)
     // 언어 변경 시 Monaco 설정 재적용
     if (editorRef.current) {
@@ -121,7 +121,7 @@ export function CodeEditor({
   }, [])
 
   // Monaco 언어별 설정 함수
-  const configureMonacoForLanguage = useCallback((monaco: any, lang: 'python' | 'typescript' | 'javascript') => {
+  const configureMonacoForLanguage = useCallback((monaco: any, lang: 'python' | 'typescript') => {
     // 전역 에러 코드 무시 설정 (모든 언어에 적용)
     const commonIgnoredErrors = [
       2792, // Cannot find module
@@ -138,7 +138,7 @@ export function CodeEditor({
       1109, // Expression expected
     ]
 
-    if (lang === 'typescript' || lang === 'javascript') {
+    if (lang === 'typescript') {
       // TypeScript 컴파일러 옵션 설정
       monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
         target: monaco.languages.typescript.ScriptTarget.ES2020,
@@ -153,16 +153,6 @@ export function CodeEditor({
         strict: false,
         skipLibCheck: true,
         typeRoots: ['node_modules/@types']
-      })
-
-      // JavaScript 컴파일러 옵션 설정
-      monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
-        target: monaco.languages.typescript.ScriptTarget.ES2020,
-        lib: ['ES2020', 'DOM'],
-        allowNonTsExtensions: true,
-        allowJs: true,
-        checkJs: false,
-        noEmit: true
       })
 
       // LangGraph 모듈 타입 정의
@@ -213,27 +203,12 @@ declare global {
       const uri = monaco.Uri.parse('ts:filename/langgraph.d.ts')
       try {
         monaco.languages.typescript.typescriptDefaults.addExtraLib(langGraphTypes, uri.toString())
-        monaco.languages.typescript.javascriptDefaults.addExtraLib(langGraphTypes, uri.toString())
       } catch (error) {
         // 이미 존재하는 경우 무시
       }
 
-      // TypeScript와 JavaScript 각각 다른 설정 적용
+      // TypeScript 설정 적용
       if (lang === 'typescript') {
-        monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
-          noSemanticValidation: false,
-          noSyntaxValidation: false,
-          onlyVisible: true,
-          diagnosticCodesToIgnore: commonIgnoredErrors
-        })
-      } else if (lang === 'javascript') {
-        monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
-          noSemanticValidation: true, // JavaScript는 시맨틱 검증 완전 비활성화
-          noSyntaxValidation: false,
-          onlyVisible: true
-        })
-
-        // JavaScript에서 TypeScript 전용 에러들 무시 (TypeScript 기본 설정에도 적용)
         monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
           noSemanticValidation: false,
           noSyntaxValidation: false,
@@ -274,7 +249,7 @@ declare global {
         exampleCode = pythonSnippets.state_definition
       }
     } else {
-      // TypeScript/JavaScript examples
+      // TypeScript examples
       if (exampleKey in typescriptSnippets) {
         exampleCode = typescriptSnippets[exampleKey as keyof typeof typescriptSnippets]
       }
@@ -416,8 +391,6 @@ declare global {
         return 'python'
       case 'typescript':
         return 'typescript'
-      case 'javascript':
-        return 'javascript'
       default:
         return 'python'
     }
@@ -450,7 +423,7 @@ declare global {
                 <SelectContent>
                   <SelectItem value="python">Python</SelectItem>
                   <SelectItem value="typescript">TypeScript</SelectItem>
-                  <SelectItem value="javascript">JavaScript</SelectItem>
+                  {/* JavaScript option removed */}
                 </SelectContent>
               </Select>
             </div>
@@ -545,12 +518,7 @@ declare global {
                   >
                     Conditional Routing
                   </button>
-                  <button
-                    onClick={() => handleLoadExample('javascript')}
-                    className="w-full text-left px-2 py-1 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                  >
-                    JavaScript Example
-                  </button>
+                  {/* JavaScript example removed */}
                   <button
                     onClick={() => handleLoadExample('complexWorkflow')}
                     className="w-full text-left px-2 py-1 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 rounded"

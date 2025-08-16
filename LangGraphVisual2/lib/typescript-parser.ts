@@ -13,7 +13,7 @@ const logger = {
 
  
 
-// TypeScript/JavaScript LangGraph patterns
+// TypeScript LangGraph patterns
 const TS_PATTERNS = {
     // const workflow = new StateGraph(State)
     STATE_GRAPH: /(?:const|let|var)\s+(\w+)\s*=\s*new\s+StateGraph\s*\(/g,
@@ -71,7 +71,7 @@ function cleanIdentifier(identifier: string): string {
 }
 
 /**
- * Extract nodes from TypeScript/JavaScript code
+ * Extract nodes from TypeScript code
  */
 function extractNodes(code: string): { nodes: ParsedNode[], nodeSet: Set<string> } {
     const nodes: ParsedNode[] = []
@@ -112,7 +112,7 @@ function extractNodes(code: string): { nodes: ParsedNode[], nodeSet: Set<string>
 }
 
 /**
- * Extract direct edges from TypeScript/JavaScript code
+ * Extract direct edges from TypeScript code
  */
 function extractDirectEdges(code: string): ParsedEdge[] {
     const edges: ParsedEdge[] = []
@@ -159,7 +159,7 @@ function extractDirectEdges(code: string): ParsedEdge[] {
 }
 
 /**
- * Extract conditional edges from TypeScript/JavaScript code
+ * Extract conditional edges from TypeScript code
  */
 function extractConditionalEdges(
     code: string,
@@ -222,7 +222,7 @@ function extractConditionalEdges(
 }
 
 /**
- * Extract entry point from TypeScript/JavaScript code
+ * Extract entry point from TypeScript code
  */
 function extractEntryPoint(code: string): ParsedEdge | null {
     const match = TS_PATTERNS.SET_ENTRY.exec(code)
@@ -356,11 +356,11 @@ function markLoopFeedbackEdges(edges: ParsedEdge[], nodes: ParsedNode[]): void {
 }
 
 /**
- * Parse TypeScript/JavaScript LangGraph code
+ * Parse TypeScript LangGraph code
  */
 export function parseTypeScriptCode(code: string): ParseResult {
     try {
-        logger.debug('Starting TypeScript/JavaScript parsing...')
+        logger.debug('Starting TypeScript parsing...')
         
         // Extract components
         const { nodes, nodeSet } = extractNodes(code)
@@ -393,7 +393,7 @@ export function parseTypeScriptCode(code: string): ParseResult {
             success: true
         }
     } catch (error) {
-        logger.error('Failed to parse TypeScript/JavaScript code:', error)
+        logger.error('Failed to parse TypeScript code:', error)
         return {
             nodes: [],
             edges: [],

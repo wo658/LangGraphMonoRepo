@@ -1,4 +1,4 @@
-// TypeScript and JavaScript LangGraph code snippets
+// TypeScript LangGraph code snippets
 export const typescriptSnippets = {
   basic: `// Basic TypeScript LangGraph with Conditional Edges
 import { StateGraph } from "langgraph"
@@ -123,50 +123,7 @@ workflow.addEdge("complete", "END")
 
 export default workflow`,
 
-  javascript: `// JavaScript LangGraph Workflow
-const { StateGraph } = require("langgraph")
-
-// Create workflow
-const workflow = new StateGraph()
-
-// Define node functions
-const agent = async (state) => {
-  console.log("Agent processing:", state)
-  return { ...state, currentStep: "agent" }
-}
-
-const researcher = async (state) => {
-  console.log("Researcher analyzing:", state)
-  return { ...state, currentStep: "researcher" }
-}
-
-const validator = async (state) => {
-  console.log("Validating results:", state)
-  return { ...state, currentStep: "validated" }
-}
-
-const reporter = async (state) => {
-  console.log("Generating report:", state)
-  return { ...state, currentStep: "reported" }
-}
-
-// Add nodes
-workflow.addNode("agent", agent)
-workflow.addNode("researcher", researcher)
-workflow.addNode("validator", validator)
-workflow.addNode("reporter", reporter)
-
-// Add edges
-workflow.addEdge("START", "agent")
-workflow.addEdge("agent", "researcher")
-workflow.addEdge("researcher", "validator")
-workflow.addEdge("validator", "reporter")
-workflow.addEdge("reporter", "END")
-
-// Set entry point
-workflow.setEntryPoint("agent")
-
-module.exports = workflow`,
+ 
 
   complexWorkflow: `// Complex TypeScript Workflow with Multiple Paths
 import { StateGraph } from "langgraph"
@@ -337,7 +294,7 @@ export function getRandomTypeScriptSnippet(): string {
   return typescriptSnippets[randomKey]
 }
 
-// Helper function to detect if code is TypeScript/JavaScript
+// Helper function to detect if code is TypeScript
 export function isTypeScriptCode(code: string): boolean {
   const tsPatterns = [
     /new\s+StateGraph/,

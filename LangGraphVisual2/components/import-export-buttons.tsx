@@ -31,10 +31,9 @@ export function ImportExportButtons({ onImport }: ImportExportButtonsProps) {
   // 코드 파일로 내보내기 (확장자 자동 선택)
   const handleExportCode = async () => {
     try {
-      const extMap: Record<'python' | 'typescript' | 'javascript', string> = {
+      const extMap: Record<'python' | 'typescript', string> = {
         python: 'py',
         typescript: 'ts',
-        javascript: 'js',
       }
       const ext = extMap[language] ?? 'txt'
       const timestamp = new Date()

@@ -1,16 +1,15 @@
-// Convert LangGraph back to TypeScript/JavaScript code
+// Convert LangGraph back to TypeScript code
 import type { LangGraph, GraphNode, GraphEdge } from "@/lib/types"
 
-// Language types for code generation
-export type CodeLanguage = 'typescript' | 'javascript'
+// (JavaScript support removed)
 
 // Constants for better maintainability
 const SPECIAL_NODES = ['__start__', '__end__'] as const
 
-// Utility functions for TypeScript/JavaScript code generation
+// Utility functions for TypeScript code generation
 const TSCodeGenerationUtils = {
   /**
-   * Sanitizes a node ID to be a valid TypeScript/JavaScript function name
+   * Sanitizes a node ID to be a valid TypeScript function name
    */
   sanitizeFunctionName(id: string): string {
     return id.replace(/[^a-zA-Z0-9_]/g, '_').replace(/^[0-9]/, '_$&')
@@ -24,11 +23,11 @@ const TSCodeGenerationUtils = {
   },
 
   /**
-   * Formats a node reference for TypeScript/JavaScript code
+   * Formats a node reference for TypeScript code (string constants)
    */
-  formatNodeReference(nodeId: string, language: CodeLanguage): string {
-    if (nodeId === '__start__') return language === 'typescript' ? 'START' : '"START"'
-    if (nodeId === '__end__') return language === 'typescript' ? 'END' : '"END"'
+  formatNodeReference(nodeId: string): string {
+    if (nodeId === '__start__') return '"START"'
+    if (nodeId === '__end__') return '"END"'
     return `"${nodeId}"`
   },
 
@@ -66,34 +65,25 @@ const TSCodeGenerationUtils = {
  * Code generation strategies using Strategy Pattern
  */
 interface TSCodeGenerator {
-  generate(graph: LangGraph, language: CodeLanguage): string
+  generate(graph: LangGraph): string
 }
 
 class TSImportsGenerator implements TSCodeGenerator {
-  generate(_graph: LangGraph, language: CodeLanguage): string {
-    if (language === 'typescript') {
-      return `import { StateGraph } from "langgraph"
+  generate(_graph: LangGraph): string {
+    return `import { StateGraph } from "langgraph"
 
 // Define the state interface
 interface WorkflowState {
   // Add your state fields here
   [key: string]: any
 }`
-    } else {
-      return `const { StateGraph } = require("langgraph")
-
-// Define the initial state structure
-const initialState = {
-  // Add your state fields here
-}`
-    }
   }
 }
 
 class TSNodeFunctionsGenerator implements TSCodeGenerator {
-  generate(graph: LangGraph, language: CodeLanguage): string {
+  generate(graph: LangGraph): string {
     return this.getRegularNodes(graph)
-      .map(node => this.generateNodeFunction(node, language))
+      .map(node => this.generateNodeFunction(node))
       .join('')
   }
 
@@ -101,11 +91,10 @@ class TSNodeFunctionsGenerator implements TSCodeGenerator {
     return graph.nodes.filter(node => !SPECIAL_NODES.includes(node.id as any))
   }
 
-  private generateNodeFunction(node: GraphNode, language: CodeLanguage): string {
+  private generateNodeFunction(node: GraphNode): string {
     const sanitizedId = this.sanitizeFunctionName(node.id)
-    
-    if (language === 'typescript') {
-      return `
+
+    return `
 
 // ${node.label}
 const ${sanitizedId} = async (state: WorkflowState): Promise<WorkflowState> => {
@@ -113,16 +102,6 @@ const ${sanitizedId} = async (state: WorkflowState): Promise<WorkflowState> => {
   // TODO: Implement ${node.label} logic
   return { ...state, currentStep: "${node.id}" }
 }`
-    } else {
-      return `
-
-// ${node.label}
-const ${sanitizedId} = async (state) => {
-  console.log("Processing ${node.label}:", state)
-  // TODO: Implement ${node.label} logic
-  return { ...state, currentStep: "${node.id}" }
-}`
-    }
   }
 
   private sanitizeFunctionName(id: string): string {
@@ -131,12 +110,11 @@ const ${sanitizedId} = async (state) => {
 }
 
 class TSWorkflowGenerator implements TSCodeGenerator {
-  generate(graph: LangGraph, language: CodeLanguage): string {
-    const stateType = language === 'typescript' ? 'WorkflowState' : ''
+  generate(graph: LangGraph): string {
     const setup = `
 
 // Build the workflow
-const workflow = new StateGraph(${stateType})
+const workflow = new StateGraph(WorkflowState)
 
 // Add nodes`
     
@@ -157,25 +135,25 @@ const workflow = new StateGraph(${stateType})
 }
 
 class TSEdgesGenerator implements TSCodeGenerator {
-  generate(graph: LangGraph, language: CodeLanguage): string {
+  generate(graph: LangGraph): string {
     const header = `
 
 // Add edges`
     
-    const directEdges = this.generateDirectEdges(graph, language)
-    const conditionalEdges = this.generateConditionalEdges(graph, language)
+    const directEdges = this.generateDirectEdges(graph)
+    const conditionalEdges = this.generateConditionalEdges(graph)
 
     return [header, directEdges, conditionalEdges].filter(Boolean).join('\n')
   }
 
-  private generateDirectEdges(graph: LangGraph, language: CodeLanguage): string {
+  private generateDirectEdges(graph: LangGraph): string {
     return graph.edges
       .filter(edge => !edge.label || edge.label === '')
-      .map(edge => this.formatDirectEdge(edge, language))
+      .map(edge => this.formatDirectEdge(edge))
       .join('\n')
   }
 
-  private generateConditionalEdges(graph: LangGraph, language: CodeLanguage): string {
+  private generateConditionalEdges(graph: LangGraph): string {
     const conditionalEdges = graph.edges.filter(edge => edge.label && edge.label !== '')
     
     if (conditionalEdges.length === 0) return ''
@@ -194,23 +172,13 @@ class TSEdgesGenerator implements TSCodeGenerator {
       const routingFunctionName = `route${this.capitalizeFirst(source)}`
       
       // Generate routing function
-      if (language === 'typescript') {
-        result += `
+      result += `
 // Routing function for ${source}
 const ${routingFunctionName} = (state: WorkflowState): string => {
   // TODO: Implement routing logic
   // Return one of: ${edges.map(e => `"${e.label}"`).join(', ')}
   return "default"
 }`
-      } else {
-        result += `
-// Routing function for ${source}
-const ${routingFunctionName} = (state) => {
-  // TODO: Implement routing logic
-  // Return one of: ${edges.map(e => `"${e.label}"`).join(', ')}
-  return "default"
-}`
-      }
 
       // Generate mapping object
       const mappings = edges.map(edge => `  "${edge.label}": "${edge.target}"`).join(',\n')
@@ -226,9 +194,9 @@ ${mappings}
     return result
   }
 
-  private formatDirectEdge(edge: GraphEdge, language: CodeLanguage): string {
-    const source = TSCodeGenerationUtils.formatNodeReference(edge.source, language)
-    const target = TSCodeGenerationUtils.formatNodeReference(edge.target, language)
+  private formatDirectEdge(edge: GraphEdge): string {
+    const source = TSCodeGenerationUtils.formatNodeReference(edge.source)
+    const target = TSCodeGenerationUtils.formatNodeReference(edge.target)
     return `workflow.addEdge(${source}, ${target})`
   }
 
@@ -238,7 +206,7 @@ ${mappings}
 }
 
 class TSEntryPointGenerator implements TSCodeGenerator {
-  generate(graph: LangGraph, _language: CodeLanguage): string {
+  generate(graph: LangGraph): string {
     // Find the entry point (node that START points to)
     const startEdge = graph.edges.find(edge => edge.source === '__start__')
     const entryNode = startEdge ? startEdge.target : graph.nodes[0]?.id
@@ -255,25 +223,17 @@ workflow.setEntryPoint("${entryNode}")`
 }
 
 class TSExportGenerator implements TSCodeGenerator {
-  generate(_graph: LangGraph, language: CodeLanguage): string {
-    if (language === 'typescript') {
-      return `
+  generate(_graph: LangGraph): string {
+    return `
 
 // Compile and export the workflow
 const compiledWorkflow = workflow.compile()
 export default compiledWorkflow`
-    } else {
-      return `
-
-// Compile and export the workflow
-const compiledWorkflow = workflow.compile()
-module.exports = compiledWorkflow`
-    }
   }
 }
 
 /**
- * Main TypeScript/JavaScript code generator using Template Method Pattern
+ * Main TypeScript code generator using Template Method Pattern
  */
 class TypeScriptCodeGenerator {
   private generators: TSCodeGenerator[]
@@ -289,7 +249,7 @@ class TypeScriptCodeGenerator {
     ]
   }
 
-  generate(graph: LangGraph, language: CodeLanguage): string {
+  generate(graph: LangGraph): string {
     if (!this.isValidGraph(graph)) {
       return ""
     }
@@ -301,7 +261,7 @@ class TypeScriptCodeGenerator {
     }
 
     return this.generators
-      .map(generator => generator.generate(graph, language))
+      .map(generator => generator.generate(graph))
       .join('\n')
   }
 
@@ -318,16 +278,5 @@ export function createTypeScriptCodeGenerator(): TypeScriptCodeGenerator {
 // Main export functions
 export function generateTypeScriptCode(graph: LangGraph): string {
   const generator = createTypeScriptCodeGenerator()
-  return generator.generate(graph, 'typescript')
-}
-
-export function generateJavaScriptCode(graph: LangGraph): string {
-  const generator = createTypeScriptCodeGenerator()
-  return generator.generate(graph, 'javascript')
-}
-
-// Generic function that accepts language parameter
-export function generateCode(graph: LangGraph, language: CodeLanguage): string {
-  const generator = createTypeScriptCodeGenerator()
-  return generator.generate(graph, language)
+  return generator.generate(graph)
 }

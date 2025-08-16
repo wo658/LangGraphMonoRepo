@@ -1,9 +1,9 @@
-// Convert LangGraph back to Python/TypeScript/JavaScript code
+// Convert LangGraph back to Python/TypeScript code
 import type { LangGraph, GraphNode, GraphEdge } from "@/lib/types"
-import { generateTypeScriptCode, generateJavaScriptCode, type CodeLanguage } from "./typescript-code-generator"
+import { generateTypeScriptCode } from "./typescript-code-generator"
 
 // Supported code generation languages
-export type SupportedLanguage = 'python' | 'typescript' | 'javascript'
+export type SupportedLanguage = 'python' | 'typescript'
 
 // Constants for better maintainability
 const SPECIAL_NODES = ['__start__', '__end__'] as const
@@ -224,8 +224,6 @@ export function generateCode(graph: LangGraph, language: SupportedLanguage): str
       return generatePythonCode(graph)
     case 'typescript':
       return generateTypeScriptCode(graph)
-    case 'javascript':
-      return generateJavaScriptCode(graph)
     default:
       throw new Error(`Unsupported language: ${language}`)
   }
@@ -233,7 +231,7 @@ export function generateCode(graph: LangGraph, language: SupportedLanguage): str
 
 // Utility function to get available languages
 export function getSupportedLanguages(): SupportedLanguage[] {
-  return ['python', 'typescript', 'javascript']
+  return ['python', 'typescript']
 }
 
 // Utility function to get language display names
@@ -243,8 +241,6 @@ export function getLanguageDisplayName(language: SupportedLanguage): string {
       return 'Python'
     case 'typescript':
       return 'TypeScript'
-    case 'javascript':
-      return 'JavaScript'
     default:
       return language
   }

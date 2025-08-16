@@ -62,8 +62,8 @@ export default function IndexPage() {
       let parseResult
       let parsedGraph
 
-      if (language === 'typescript' || language === 'javascript') {
-        // Use TypeScript/JavaScript parser
+      if (language === 'typescript') {
+        // Use TypeScript parser
         const { parseTypeScriptCode, convertToLangGraph } = await import("@/lib/typescript-parser")
         parseResult = parseTypeScriptCode(code)
         parsedGraph = convertToLangGraph(parseResult)

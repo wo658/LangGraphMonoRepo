@@ -7,7 +7,7 @@ import { DEFAULT_EDITOR_SETTINGS } from '@/lib/constants'
 interface EditorStore {
   // Editor state
   code: string
-  language: 'python' | 'typescript' | 'javascript'
+  language: 'python' | 'typescript'
   editorSettings: EditorSettings
   isRunning: boolean
   isGeneratingCode: boolean
@@ -17,7 +17,7 @@ interface EditorStore {
   
   // Actions
   updateCode: (code: string) => void
-  setLanguage: (language: 'python' | 'typescript' | 'javascript') => void
+  setLanguage: (language: 'python' | 'typescript') => void
   setIsRunning: (running: boolean) => void
   setIsGeneratingCode: (generating: boolean) => void
   updateEditorSettings: (settings: Partial<EditorSettings>) => void
@@ -135,7 +135,7 @@ export const useEditorStore = create<EditorStore>()(
         })
       },
 
-      setLanguage: (language: 'python' | 'typescript' | 'javascript') => {
+      setLanguage: (language: 'python' | 'typescript') => {
         set({ language })
       },
 
