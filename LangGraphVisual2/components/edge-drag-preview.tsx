@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react'
 import { useDragState } from '@/stores/ui-store'
+import { GRAPH_STYLES } from '@/lib/constants'
 
 interface EdgeDragPreviewProps {
   sourceX: number
@@ -35,7 +36,7 @@ export function EdgeDragPreview({ sourceX, sourceY, targetX, targetY }: EdgeDrag
   }, [sourceX, sourceY, targetX, targetY, dragState])
 
   const previewStyle = useMemo(() => ({
-    stroke: '#ef4444', // Red color for preview
+    stroke: GRAPH_STYLES.COLORS.LOOP_FEEDBACK_EDGE,
     strokeWidth: 2,
     strokeDasharray: '5,5',
     fill: 'none',

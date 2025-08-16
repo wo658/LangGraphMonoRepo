@@ -1,9 +1,13 @@
 import type { Edge, Node } from 'reactflow'
 import type { GraphEdge } from './types'
+import { GRAPH_STYLES } from '@/lib/constants'
 
 const EDGE_COLORS = {
-  base: { light: "#6b7280", dark: "#9ca3af" },
-  loopFeedback: "#ef4444"
+  base: {
+    light: GRAPH_STYLES.COLORS.LIGHT_THEME.EDGE_STROKE,
+    dark: GRAPH_STYLES.COLORS.DARK_THEME.EDGE_STROKE,
+  },
+  loopFeedback: GRAPH_STYLES.COLORS.LOOP_FEEDBACK_EDGE,
 } as const
 
 // 노드의 연결점 정의 (상하좌우 중심점)

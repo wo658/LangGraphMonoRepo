@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 import { useToasts, useRemoveToast } from '@/stores/notification-store'
 import { cn } from '@/lib/utils'
+import { TOAST_CONFIG } from '@/lib/constants'
 
 export function ToastContainer() {
   const toasts = useToasts()
@@ -31,7 +32,7 @@ interface ToastProps {
   onRemove: (id: string) => void
 }
 
-function Toast({ id, title, description, variant, duration = 5000, onRemove }: ToastProps) {
+function Toast({ id, title, description, variant, duration = TOAST_CONFIG.DEFAULT_DURATION, onRemove }: ToastProps) {
   const removeRef = useRef(onRemove)
   const idRef = useRef(id)
   

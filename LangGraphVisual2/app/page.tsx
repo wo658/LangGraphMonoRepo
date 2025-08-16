@@ -14,6 +14,7 @@ import { useSelectedEdgeId, useSelectedNodeId, useIsCodePanelMinimized, useIsCon
 import { useAddToast } from '@/stores/notification-store'
 import { useI18n } from '@/stores/i18n-store'
 import { EXECUTION_CONFIG } from "@/lib/constants"
+import { detectLanguage } from '@/lib/language-detect'
 
 export default function IndexPage() {
   const { t } = useI18n()
@@ -56,29 +57,7 @@ export default function IndexPage() {
       // 로딩 시뮬레이션
       await new Promise((resolve) => setTimeout(resolve, EXECUTION_CONFIG.LOADING_SIMULATION_DELAY))
 
-      // Detect language
-      const detectLanguage = (code: string): 'python' | 'typescript' | 'javascript' => {
-        // Check for TypeScript/JavaScript patterns first
-        if (/new\s+StateGraph|\.addNode|\.addEdge|\.setEntryPoint/.test(code)) {
-          // More specific TypeScript patterns
-          if (/:\s*(string|number|boolean|any|void)|interface\s+|type\s+\w+\s*=/.test(code)) {
-            return 'typescript'
-          }
-          // JavaScript patterns
-          if (/const\s+|let\s+|var\s+|=>\s*{/.test(code)) {
-            return 'javascript'
-          }
-        }
-        
-        // Python patterns
-        if (/def\s+|class\s+|import\s+|from\s+.*import|add_node|add_edge|StateGraph/.test(code)) {
-          return 'python'
-        }
-        
-        // Default to Python for backward compatibility
-        return 'python'
-      }
-
+      // Detect language (shared)
       const language = detectLanguage(code)
       let parseResult
       let parsedGraph

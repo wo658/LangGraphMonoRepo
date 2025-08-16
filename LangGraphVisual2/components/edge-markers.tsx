@@ -1,5 +1,7 @@
 "use client"
 
+import { GRAPH_STYLES } from '@/lib/constants'
+
 export function EdgeMarkers() {
   return (
     <svg style={{ position: 'absolute', top: 0, left: 0, width: 0, height: 0 }}>
@@ -17,7 +19,7 @@ export function EdgeMarkers() {
         >
           <path
             d="M 0 0 L 15 7.5 L 0 15 z"
-            fill="#6b7280"
+            fill={GRAPH_STYLES.COLORS.LIGHT_THEME.EDGE_STROKE}
             stroke="none"
           />
         </marker>
@@ -35,7 +37,7 @@ export function EdgeMarkers() {
         >
           <path
             d="M 0 0 L 15 7.5 L 0 15 z"
-            fill="#3b82f6"
+            fill={GRAPH_STYLES.COLORS.SELECTED_EDGE}
             stroke="none"
           />
         </marker>
@@ -53,7 +55,7 @@ export function EdgeMarkers() {
         >
           <path
             d="M 0 0 L 15 7.5 L 0 15 z"
-            fill="#9ca3af"
+            fill={GRAPH_STYLES.COLORS.DARK_THEME.EDGE_STROKE}
             stroke="none"
           />
         </marker>
@@ -71,7 +73,7 @@ export function EdgeMarkers() {
         >
           <path
             d="M 0 0 L 15 7.5 L 0 15 z"
-            fill="#ef4444"
+            fill={GRAPH_STYLES.COLORS.LOOP_FEEDBACK_EDGE}
             stroke="none"
           />
         </marker>

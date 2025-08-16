@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { devtools, subscribeWithSelector } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
 import type { EditorSettings, UserChangeTracker } from '@/lib/types'
+import { DEFAULT_EDITOR_SETTINGS } from '@/lib/constants'
 
 interface EditorStore {
   // Editor state
@@ -26,13 +27,7 @@ interface EditorStore {
   resetChangeTracker: () => void
 }
 
-// Default editor settings
-const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
-  fontSize: 14,
-  wordWrap: true,
-  minimap: true,
-  tabSize: 2,
-}
+// DEFAULT_EDITOR_SETTINGS는 '@/lib/constants'에서 단일 소스로 제공합니다.
 
 // Default code template (통합 예제: 단일 코드에서 조건부 엣지 테스트)
 const DEFAULT_CODE = `# LangGraph 통합 예제: 단일 워크플로우에서 조건부 엣지 테스트

@@ -12,6 +12,7 @@ import { API_BASE_URL } from '@/lib/api'
 import { pythonSnippets } from '@/utils/python-snippets'
 import { typescriptSnippets } from '@/utils/typescript-snippets'
 import { useLanguage, useEditorActions } from '@/stores/editor-store'
+import { detectLanguage } from '@/lib/language-detect'
 
 // Monaco Editor를 동적으로 로드하여 SSR 문제 방지
 const MonacoEditor = dynamic(
@@ -36,68 +37,7 @@ interface CodeEditorProps {
   className?: string
 }
 
-// 언어 감지 함수
-const detectLanguage = (code: string): 'python' | 'typescript' | 'javascript' => {
-  // Python 특징적인 패턴들
-  const pythonPatterns = [
-    /def\s+\w+\s*\(/,
-    /import\s+\w+/,
-    /from\s+\w+\s+import/,
-    /class\s+\w+\s*\(/,
-    /:\s*$/m,
-    /__\w+__/,
-    /self\./,
-    /print\s*\(/,
-    /langgraph/i,
-    /StateGraph/
-  ]
-
-  // TypeScript 특징적인 패턴들
-  const typescriptPatterns = [
-    /:\s*(string|number|boolean|object|any|unknown|void|never)/,
-    /interface\s+\w+/,
-    /type\s+\w+\s*=/,
-    /enum\s+\w+/,
-    /<\w+>/,
-    /as\s+\w+/,
-    /import.*from.*['"].*\.ts['"]/
-  ]
-
-  // JavaScript 특징적인 패턴들
-  const javascriptPatterns = [
-    /function\s+\w+\s*\(/,
-    /const\s+\w+\s*=/,
-    /let\s+\w+\s*=/,
-    /var\s+\w+\s*=/,
-    /=>\s*{/,
-    /console\.log/,
-    /document\./,
-    /window\./,
-    /require\s*\(/
-  ]
-
-  // 패턴 점수 계산
-  const pythonScore = pythonPatterns.reduce((score, pattern) => {
-    return score + (pattern.test(code) ? 1 : 0)
-  }, 0)
-
-  const typescriptScore = typescriptPatterns.reduce((score, pattern) => {
-    return score + (pattern.test(code) ? 1 : 0)
-  }, 0)
-
-  const javascriptScore = javascriptPatterns.reduce((score, pattern) => {
-    return score + (pattern.test(code) ? 1 : 0)
-  }, 0)
-
-  // 가장 높은 점수의 언어 반환
-  if (pythonScore >= typescriptScore && pythonScore >= javascriptScore) {
-    return 'python'
-  } else if (typescriptScore > javascriptScore) {
-    return 'typescript'
-  } else {
-    return 'javascript'
-  }
-}
+// 언어 감지 로직은 '@/lib/language-detect'로 이동되었습니다.
 
 export function CodeEditor({
   value,

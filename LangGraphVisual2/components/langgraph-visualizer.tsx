@@ -10,7 +10,8 @@ import ReactFlow, {
   useEdgesState,
   type Connection,
   type BackgroundVariant,
-} from "reactflow"
+} from 'reactflow'
+import { GRAPH_STYLES } from '@/lib/constants'
 import "reactflow/dist/style.css"
 
 import { CurvedEdge } from "./curved-edge"
@@ -357,13 +358,13 @@ function GraphFlow() {
           variant={"dots" as BackgroundVariant}
           gap={12}
           size={1}
-          color={isDark ? "#374151" : "#e5e7eb"}
+          color={isDark ? GRAPH_STYLES.COLORS.DARK_THEME.MINIMAP_BORDER : GRAPH_STYLES.COLORS.LIGHT_THEME.MINIMAP_BORDER}
         />
         <Controls />
         <MiniMap
           maskColor={isDark ? "rgba(0, 0, 0, 0.6)" : "rgba(255, 255, 255, 0.6)"}
-          nodeColor={isDark ? "#374151" : "#e5e7eb"}
-          nodeStrokeColor={isDark ? "#6b7280" : "#9ca3af"}
+          nodeColor={isDark ? GRAPH_STYLES.COLORS.DARK_THEME.MINIMAP_BG : GRAPH_STYLES.COLORS.LIGHT_THEME.MINIMAP_BG}
+          nodeStrokeColor={isDark ? GRAPH_STYLES.COLORS.DARK_THEME.EDGE_STROKE : GRAPH_STYLES.COLORS.LIGHT_THEME.EDGE_STROKE}
           nodeBorderRadius={4}
           zoomable
           pannable

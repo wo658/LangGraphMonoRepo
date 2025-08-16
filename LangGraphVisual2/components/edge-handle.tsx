@@ -3,6 +3,7 @@
 import React, { useCallback, useMemo } from 'react'
 import { useDragState } from '@/stores/ui-store'
 import type { Position } from '@/lib/types'
+import { GRAPH_STYLES } from '@/lib/constants'
 
 interface EdgeHandleProps {
   edgeId: string
@@ -69,7 +70,9 @@ export function EdgeHandle({
     width: 12,
     height: 12,
     borderRadius: '50%',
-    backgroundColor: isDragging ? '#ef4444' : (endpoint === 'source' ? '#10b981' : '#3b82f6'),
+    backgroundColor: isDragging
+      ? GRAPH_STYLES.COLORS.LOOP_FEEDBACK_EDGE
+      : (endpoint === 'source' ? '#10b981' : GRAPH_STYLES.COLORS.SELECTED_EDGE),
     border: '2px solid white',
     cursor: isDragging ? 'grabbing' : 'grab',
     zIndex: 1000,

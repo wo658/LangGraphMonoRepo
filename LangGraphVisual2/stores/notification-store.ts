@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { devtools, subscribeWithSelector } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
+import { TOAST_CONFIG } from '@/lib/constants'
 
 // Toast notification state
 export interface Toast {
@@ -37,8 +38,8 @@ export const useNotificationStore = create<NotificationStore>()(
           toasts: [...state.toasts, newToast]
         }))
 
-        // Auto remove toast after duration (default 5 seconds)
-        const duration = toast.duration ?? 5000
+        // Auto remove toast after duration (default from TOAST_CONFIG)
+        const duration = toast.duration ?? TOAST_CONFIG.DEFAULT_DURATION
         if (duration > 0) {
           setTimeout(() => {
             get().removeToast(id)
