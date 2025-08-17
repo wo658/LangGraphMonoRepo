@@ -27,6 +27,14 @@ export interface LangGraph {
   edges: GraphEdge[]
 }
 
+// Derived graph helpers
+export type NodePositionMap = Record<string, Position>
+
+export interface GraphConnectivity {
+  incoming: Record<string, string[]>
+  outgoing: Record<string, string[]>
+}
+
 // Editor settings
 export interface EditorSettings {
   fontSize: number

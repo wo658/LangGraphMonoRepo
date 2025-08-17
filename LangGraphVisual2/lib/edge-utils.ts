@@ -210,9 +210,9 @@ export function calculateEdgeCurvatures(edges: GraphEdge[], nodes: Node[]): Edge
     const sourcePoints = getNodeConnectionPoints(sourceNode)
     const targetPoints = getNodeConnectionPoints(targetNode)
 
-    // 실제 핸들이 지정되어 있으면 그것을 사용하고, 없으면 최적 핸들을 사용
-    const sHandleId = edge.sourceHandle ?? connectionPoints.sourceHandle
-    const tHandleId = edge.targetHandle ?? connectionPoints.targetHandle
+    // 노드가 존재할 때는 항상 현재 위치 기반 최적 핸들을 사용하여 동적으로 갱신
+    const sHandleId = connectionPoints.sourceHandle
+    const tHandleId = connectionPoints.targetHandle
     handleByEdgeId.set(edge.id, { s: sHandleId, t: tHandleId })
 
     // sourceHandle에서 '-source' 제거하여 실제 연결점 ID 사용
@@ -278,15 +278,15 @@ export function createStyledEdge(
   let sourceHandle: string | undefined
   let targetHandle: string | undefined
 
-  if (edge.sourceHandle && edge.targetHandle) {
-    // Use predefined handles if available (from Add Edge Mode)
-    sourceHandle = edge.sourceHandle
-    targetHandle = edge.targetHandle
-  } else if (sourceNode && targetNode) {
-    // Calculate optimal handles if not provided
+  if (sourceNode && targetNode) {
+    // 노드가 있으면 언제나 현재 위치 기반 최적 핸들을 사용 (드래그 시 갱신되도록)
     const connectionPoints = getOptimalConnectionPoints(sourceNode, targetNode)
     sourceHandle = connectionPoints.sourceHandle
     targetHandle = connectionPoints.targetHandle
+  } else if (edge.sourceHandle && edge.targetHandle) {
+    // 노드를 찾을 수 없을 때만 저장된 핸들 사용
+    sourceHandle = edge.sourceHandle
+    targetHandle = edge.targetHandle
   }
 
   // 곡률에 따라 엣지 타입 결정 - 커스텀 곡선 엣지 사용

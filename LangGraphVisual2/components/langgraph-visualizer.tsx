@@ -34,7 +34,7 @@ import { useChangeActions } from '@/stores/editor-store'
 import { useI18n } from '@/stores/i18n-store'
 import { useReactFlowData } from '@/hooks/use-reactflow-data'
 import { isValidConnection } from '@/lib/edge-connection-utils'
-import { getOptimalConnectionPoints } from '@/lib/edge-utils'
+import { getOptimalConnectionPoints, createStyledEdgesWithCollisionAvoidance } from '@/lib/edge-utils'
 
 // Node and Edge types configuration - static to prevent re-creation
 const nodeTypes = {
@@ -112,6 +112,13 @@ function GraphFlow() {
     })
     setEdges(initialEdges)
   }, [initialNodes, initialEdges, setNodes, setEdges])
+
+  // Recompute edge handles dynamically when nodes move
+  useEffect(() => {
+    if (!graph) return
+    // recalc edges using current node positions so handle sides follow geometry
+    setEdges(createStyledEdgesWithCollisionAvoidance(graph.edges, nodes as any, isDark))
+  }, [nodes, isDark, graph, setEdges])
 
   // Handle pane click for node creation and selection clearing
   const handlePaneClick = useCallback((event: React.MouseEvent) => {

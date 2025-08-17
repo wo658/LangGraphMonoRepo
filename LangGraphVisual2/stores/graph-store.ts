@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { devtools, subscribeWithSelector } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
-import type { LangGraph, GraphNode, GraphEdge, Position } from '@/lib/types'
+import type { LangGraph, GraphNode, GraphEdge, Position, NodePositionMap, GraphConnectivity } from '@/lib/types'
 
 interface GraphStore {
   // Core graph state
@@ -14,6 +14,10 @@ interface GraphStore {
   addEdge: (edge: GraphEdge) => void
   removeEdge: (edgeId: string) => void
   clearGraph: () => void
+
+  // Derived getters
+  getNodePositions: () => NodePositionMap
+  getConnectivity: () => GraphConnectivity
 }
 
 const initialState = {
@@ -84,6 +88,37 @@ export const useGraphStore = create<GraphStore>()(
 
       clearGraph: () => {
         set({ graph: null })
+      },
+
+      // Derived getters
+      getNodePositions: () => {
+        const graph = get().graph
+        const map: NodePositionMap = {}
+        if (!graph) return map
+        for (const n of graph.nodes) {
+          if (n.position) {
+            map[n.id] = { x: n.position.x, y: n.position.y }
+          }
+        }
+        return map
+      },
+
+      getConnectivity: () => {
+        const graph = get().graph
+        const connectivity: GraphConnectivity = { incoming: {}, outgoing: {} }
+        if (!graph) return connectivity
+
+        for (const n of graph.nodes) {
+          connectivity.incoming[n.id] = []
+          connectivity.outgoing[n.id] = []
+        }
+        for (const e of graph.edges) {
+          if (!connectivity.outgoing[e.source]) connectivity.outgoing[e.source] = []
+          if (!connectivity.incoming[e.target]) connectivity.incoming[e.target] = []
+          connectivity.outgoing[e.source].push(e.target)
+          connectivity.incoming[e.target].push(e.source)
+        }
+        return connectivity
       },
     })),
     {
