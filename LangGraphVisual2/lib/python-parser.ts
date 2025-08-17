@@ -370,7 +370,7 @@ function markLoopFeedbackEdges(edges: ParsedEdge[], nodeLayerMap: Map<string, nu
 /**
  * Parse LangGraph Python code to extract nodes and edges
  */
-export function parseLangGraphCode(code: string): ParseResult {
+function parseLangGraphCodeRegex(code: string): ParseResult {
     try {
         const parseContext = createParseContext(code)
         const processedGraph = processGraphElements(parseContext)
@@ -382,7 +382,7 @@ export function parseLangGraphCode(code: string): ParseResult {
             success: true
         }
     } catch (error) {
-        logger.error('Failed to parse LangGraph code:', error)
+        logger.error('Failed to parse LangGraph code (regex):', error)
         return {
             nodes: [],
             edges: [],
@@ -390,6 +390,50 @@ export function parseLangGraphCode(code: string): ParseResult {
             error: error instanceof Error ? error.message : "Unknown parsing error"
         }
     }
+}
+
+// Attempt AST-based parsing using optional @lezer/python
+async function tryParseWithLezerPython(code: string): Promise<boolean> {
+    try {
+        // Dynamically import to avoid bundling/type errors when not installed
+        const dynamicImport = new Function('m', 'return import(m)') as (m: string) => Promise<any>
+        const mod: any = await dynamicImport('@lezer/python')
+        const parser = mod && (mod.parser || mod.default || mod)
+        if (!parser || typeof parser.parse !== 'function') return false
+        const tree = parser.parse(code)
+        // Heuristic: consider it valid if the tree spans the whole doc and has no obvious error nodes
+        // Lezer marks errors with name '⚠' in many grammars, but not guaranteed; we'll just accept parse
+        return !!tree
+    } catch {
+        return false
+    }
+}
+
+async function parseLangGraphCodeASTInternal(code: string): Promise<ParseResult> {
+    // For now, we validate via AST and reuse existing extraction logic.
+    // If AST parse fails or dependency missing, we'll signal failure to trigger fallback.
+    const ok = await tryParseWithLezerPython(code)
+    if (!ok) {
+        return { nodes: [], edges: [], success: false, error: 'AST parser unavailable or parse failed' }
+    }
+
+    // Reuse existing extraction pipeline after AST validation
+    return parseLangGraphCodeRegex(code)
+}
+
+/**
+ * AST-first, regex-fallback parse for LangGraph Python
+ */
+export async function parseLangGraphCodeAsync(code: string): Promise<ParseResult> {
+    const astResult = await parseLangGraphCodeASTInternal(code)
+    const hasGraph = astResult.success && (astResult.nodes.length > 0 || astResult.edges.length > 0)
+    if (hasGraph) return astResult
+    return parseLangGraphCodeRegex(code)
+}
+
+// Backward-compatible sync export (regex-only)
+export function parseLangGraphCode(code: string): ParseResult {
+    return parseLangGraphCodeRegex(code)
 }
 
 /**

@@ -14,7 +14,7 @@ import { useSelectedEdgeId, useSelectedNodeId, useIsCodePanelMinimized, useIsCon
 import { useAddToast } from '@/stores/notification-store'
 import { useI18n } from '@/stores/i18n-store'
 import { EXECUTION_CONFIG } from "@/lib/constants"
-import { detectLanguage } from '@/lib/language-detect'
+ 
 
 export default function IndexPage() {
   const { t } = useI18n()
@@ -57,8 +57,7 @@ export default function IndexPage() {
       // 로딩 시뮬레이션
       await new Promise((resolve) => setTimeout(resolve, EXECUTION_CONFIG.LOADING_SIMULATION_DELAY))
 
-      // Detect language (shared)
-      const language = detectLanguage(code)
+      // Use explicitly selected language from store
       let parseResult
       let parsedGraph
 
@@ -68,9 +67,9 @@ export default function IndexPage() {
         parseResult = parseTypeScriptCode(code)
         parsedGraph = convertToLangGraph(parseResult)
       } else {
-        // Use Python parser
-        const { parseLangGraphCode, convertToLangGraph } = await import("@/lib/python-parser")
-        parseResult = parseLangGraphCode(code)
+        // Use Python parser (AST-first async)
+        const { parseLangGraphCodeAsync, convertToLangGraph } = await import("@/lib/python-parser")
+        parseResult = await parseLangGraphCodeAsync(code)
         parsedGraph = convertToLangGraph(parseResult)
       }
 
@@ -98,7 +97,7 @@ export default function IndexPage() {
     } finally {
       setIsRunning(false)
     }
-  }, [code, setIsRunning, updateGraph, addToast, t])
+  }, [code, language, setIsRunning, updateGraph, addToast, t])
 
   const handleImport = useCallback((data: { graph: LangGraph; code: string }) => {
     updateGraph(data.graph)

@@ -12,7 +12,6 @@ import { API_BASE_URL } from '@/lib/api'
 import { pythonSnippets } from '@/utils/python-snippets'
 import { typescriptSnippets } from '@/utils/typescript-snippets'
 import { useLanguage, useEditorActions } from '@/stores/editor-store'
-import { detectLanguage } from '@/lib/language-detect'
 
 // Monaco Editor를 동적으로 로드하여 SSR 문제 방지
 const MonacoEditor = dynamic(

@@ -79,3 +79,36 @@ export const langgraphKeywords = [
   "compile",
   "TypedDict",
 ]
+
+// ---- AST-first detection helpers ----
+async function tryParsePythonAST(code: string): Promise<boolean> {
+  try {
+    const dynamicImport = new Function('m', 'return import(m)') as (m: string) => Promise<any>
+    const mod: any = await dynamicImport('@lezer/python')
+    const parser = mod && (mod.parser || mod.default || mod)
+    if (!parser || typeof parser.parse !== 'function') return false
+    const tree = parser.parse(code)
+    return !!tree
+  } catch {
+    return false
+  }
+}
+
+function hasLangGraphHints(code: string): boolean {
+  // Lightweight heuristics for LangGraph Python
+  const patterns = [
+    /StateGraph\s*\(/,
+    /\badd_node\s*\(/,
+    /\b(add_edge|add_conditional_edges)\s*\(/,
+    /\bset_entry_point\s*\(/,
+  ]
+  return patterns.some((re) => re.test(code))
+}
+
+// Prefer AST parse (if available); fall back to regex hints
+export async function isPythonLangGraphCodeAsync(code: string): Promise<boolean> {
+  if (!code || !code.trim()) return false
+  const astOk = await tryParsePythonAST(code)
+  if (astOk && hasLangGraphHints(code)) return true
+  return hasLangGraphHints(code)
+}

@@ -1,5 +1,6 @@
 import type { ParseResult, ParsedNode, ParsedEdge } from "./python-parser"
 import type { LangGraph } from "./types"
+import * as ts from "typescript"
 
 // Enhanced logging utility
 const logger = {
@@ -12,6 +13,54 @@ const logger = {
 }
 
  
+
+// ============ AST Utilities (for AST-first parsing) ============
+function createSourceFile(code: string): ts.SourceFile {
+    return ts.createSourceFile("input.ts", code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
+}
+
+function isStringLiteralLike(n: ts.Node): n is ts.StringLiteral | ts.NoSubstitutionTemplateLiteral {
+    return ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)
+}
+
+function sanitizeTemplateText(text: string): string {
+    const noTicks = text.replace(/^`|`$/g, "")
+    return noTicks.replace(/\$\{[^}]+\}/g, "var")
+}
+
+function propertyNameToString(name: ts.PropertyName): string {
+    if (ts.isIdentifier(name)) return name.text
+    if (isStringLiteralLike(name)) return name.text
+    if (ts.isPrivateIdentifier(name)) return name.text
+    if (ts.isComputedPropertyName(name)) {
+        const e = name.expression
+        if (ts.isIdentifier(e)) return e.text
+        if (ts.isPropertyAccessExpression(e)) return e.name.text
+        return e.getText()
+    }
+    return name.getText()
+}
+
+function exprToIdentifier(expr: ts.Expression): string {
+    if (isStringLiteralLike(expr)) return cleanIdentifier(expr.text)
+    if (ts.isIdentifier(expr)) return cleanIdentifier(expr.text)
+    if (ts.isPropertyAccessExpression(expr)) return cleanIdentifier(expr.name.text)
+    if (ts.isTemplateExpression(expr)) return cleanIdentifier(sanitizeTemplateText(expr.getText()))
+    if (ts.isNoSubstitutionTemplateLiteral(expr)) return cleanIdentifier(expr.text)
+    return cleanIdentifier(expr.getText())
+}
+
+function getCallName(call: ts.CallExpression): string | null {
+    const e = call.expression
+    if (ts.isPropertyAccessExpression(e)) return e.name.text
+    if (ts.isIdentifier(e)) return e.text
+    return null
+}
+
+function traverse(node: ts.Node, cb: (n: ts.Node) => void) {
+    cb(node)
+    node.forEachChild(child => traverse(child, cb))
+}
 
 // TypeScript LangGraph patterns
 const TS_PATTERNS = {
@@ -68,6 +117,157 @@ function cleanIdentifier(identifier: string): string {
     }
     
     return cleaned
+}
+
+/**
+ * ===== AST-based extractors =====
+ */
+function extractNodesAST(sourceFile: ts.SourceFile): { nodes: ParsedNode[], nodeSet: Set<string> } {
+    const nodes: ParsedNode[] = []
+    const nodeSet = new Set<string>()
+    const varToNode: Record<string, { id: string, name?: string }> = {}
+
+    // Collect variable -> {id, name} when object literal has id/name
+    traverse(sourceFile, (n) => {
+        if (ts.isVariableDeclaration(n) && n.name && ts.isIdentifier(n.name) && n.initializer && ts.isObjectLiteralExpression(n.initializer)) {
+            const varName = n.name.text
+            let id: string | undefined
+            let name: string | undefined
+            n.initializer.properties.forEach(p => {
+                if (ts.isPropertyAssignment(p)) {
+                    const key = propertyNameToString(p.name)
+                    if (key === 'id' && p.initializer && isStringLiteralLike(p.initializer)) id = cleanIdentifier(p.initializer.text)
+                    if (key === 'name' && p.initializer && isStringLiteralLike(p.initializer)) name = cleanIdentifier(p.initializer.text)
+                }
+            })
+            if (varName && id) varToNode[varName] = { id, name }
+        }
+    })
+
+    // addNode(<id or var>)
+    traverse(sourceFile, (n) => {
+        if (!ts.isCallExpression(n)) return
+        const callName = getCallName(n)
+        if (callName !== 'addNode') return
+        const args = n.arguments
+        if (args.length < 1) return
+        const first = args[0]
+
+        let nodeId: string | undefined
+        let label: string | undefined
+        if (ts.isIdentifier(first)) {
+            const v = varToNode[first.text]
+            if (v) { nodeId = v.id; label = v.name }
+            else nodeId = exprToIdentifier(first)
+        } else {
+            nodeId = exprToIdentifier(first)
+        }
+
+        if (nodeId && !nodeSet.has(nodeId)) {
+            nodeSet.add(nodeId)
+            const finalLabel = label || (nodeId.charAt(0).toUpperCase() + nodeId.slice(1))
+            nodes.push({ id: nodeId, label: finalLabel, type: 'default' })
+        }
+    })
+
+    return { nodes, nodeSet }
+}
+
+function extractDirectEdgesAST(sourceFile: ts.SourceFile): ParsedEdge[] {
+    const edges: ParsedEdge[] = []
+    let edgeCounter = 1
+
+    // addEdge(source, target)
+    traverse(sourceFile, (n) => {
+        if (!ts.isCallExpression(n)) return
+        const callName = getCallName(n)
+        if (callName !== 'addEdge') return
+        const args = n.arguments
+        if (args.length < 2) return
+        const source = exprToIdentifier(args[0])
+        const target = exprToIdentifier(args[1])
+        if (source && target) edges.push({ id: `e${edgeCounter++}`, source, target })
+    })
+
+    // literal objects with from/to or source/target
+    traverse(sourceFile, (n) => {
+        if (!ts.isObjectLiteralExpression(n)) return
+        let fromExpr: ts.Expression | undefined
+        let toExpr: ts.Expression | undefined
+        n.properties.forEach(p => {
+            if (!ts.isPropertyAssignment(p)) return
+            const key = propertyNameToString(p.name)
+            if (key === 'from' || key === 'source') fromExpr = p.initializer
+            if (key === 'to' || key === 'target') toExpr = p.initializer
+        })
+        if (fromExpr && toExpr) {
+            const source = exprToIdentifier(fromExpr)
+            const target = exprToIdentifier(toExpr)
+            if (source && target) edges.push({ id: `e${edgeCounter++}`, source, target })
+        }
+    })
+
+    return edges
+}
+
+function extractConditionalEdgesAST(
+    sourceFile: ts.SourceFile,
+    nodes: ParsedNode[],
+    nodeSet: Set<string>
+): ParsedEdge[] {
+    const edges: ParsedEdge[] = []
+    let edgeCounter = 100
+
+    traverse(sourceFile, (n) => {
+        if (!ts.isCallExpression(n)) return
+        const callName = getCallName(n)
+        if (callName !== 'addConditionalEdges') return
+        const args = n.arguments
+        if (args.length < 3) return
+
+        const source = exprToIdentifier(args[0])
+        const conditionArg = args[1]
+        const mappingArg = args[2]
+        if (!source || !mappingArg || !ts.isObjectLiteralExpression(mappingArg)) return
+
+        let conditionLabel = 'Condition'
+        if (ts.isIdentifier(conditionArg)) conditionLabel = conditionArg.text
+        else if (ts.isPropertyAccessExpression(conditionArg)) conditionLabel = conditionArg.name.text
+
+        const conditionNodeId = `${source}_condition`
+        if (!nodeSet.has(conditionNodeId)) {
+            nodeSet.add(conditionNodeId)
+            nodes.push({ id: conditionNodeId, label: conditionLabel || 'Condition', type: 'default' })
+        }
+        edges.push({ id: `e${edgeCounter++}`, source, target: conditionNodeId })
+
+        mappingArg.properties.forEach(prop => {
+            if (!ts.isPropertyAssignment(prop)) return
+            const key = propertyNameToString(prop.name)
+            const condition = cleanIdentifier(key)
+            const target = exprToIdentifier(prop.initializer as ts.Expression)
+            if (condition && target) {
+                edges.push({ id: `e${edgeCounter++}`, source: conditionNodeId, target, label: condition, animated: true })
+            }
+        })
+    })
+
+    return edges
+}
+
+function extractEntryPointAST(sourceFile: ts.SourceFile): ParsedEdge | null {
+    let result: ParsedEdge | null = null
+    traverse(sourceFile, (n) => {
+        if (result) return
+        if (!ts.isCallExpression(n)) return
+        const callName = getCallName(n)
+        if (callName !== 'setEntryPoint') return
+        const args = n.arguments
+        if (args.length < 1) return
+        const entryNode = exprToIdentifier(args[0])
+        if (entryNode) result = { id: 'e_entry', source: '__start__', target: entryNode }
+    })
+    return result
 }
 
 /**
@@ -356,11 +556,38 @@ function markLoopFeedbackEdges(edges: ParsedEdge[], nodes: ParsedNode[]): void {
 }
 
 /**
- * Parse TypeScript LangGraph code
+ * Parse via AST (primary)
  */
-export function parseTypeScriptCode(code: string): ParseResult {
+function parseTypeScriptCodeAST(code: string): ParseResult {
     try {
-        logger.debug('Starting TypeScript parsing...')
+        logger.debug('AST: Starting TypeScript parsing...')
+        const sf = createSourceFile(code)
+
+        const { nodes, nodeSet } = extractNodesAST(sf)
+        const directEdges = extractDirectEdgesAST(sf)
+        const conditionalEdges = extractConditionalEdgesAST(sf, nodes, nodeSet)
+
+        const allEdges = [...directEdges, ...conditionalEdges]
+        const entryEdge = extractEntryPointAST(sf)
+        if (entryEdge) allEdges.push(entryEdge)
+
+        addSpecialNodes(nodes, allEdges, nodeSet)
+        layoutNodes(nodes, allEdges)
+        markLoopFeedbackEdges(allEdges, nodes)
+
+        return { nodes, edges: allEdges, success: true }
+    } catch (error) {
+        logger.error('AST parse failed:', error)
+        return { nodes: [], edges: [], success: false, error: error instanceof Error ? error.message : 'Unknown AST parsing error' }
+    }
+}
+
+/**
+ * Parse via regex (fallback)
+ */
+function parseTypeScriptCodeRegex(code: string): ParseResult {
+    try {
+        logger.debug('Regex: Starting TypeScript parsing...')
         
         // Extract components
         const { nodes, nodeSet } = extractNodes(code)
@@ -385,22 +612,29 @@ export function parseTypeScriptCode(code: string): ParseResult {
         // Mark feedback loops
         markLoopFeedbackEdges(allEdges, nodes)
         
-        logger.debug(`Parsed ${nodes.length} nodes and ${allEdges.length} edges`)
-        
         return {
             nodes,
             edges: allEdges,
             success: true
         }
     } catch (error) {
-        logger.error('Failed to parse TypeScript code:', error)
-        return {
-            nodes: [],
-            edges: [],
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown parsing error'
-        }
+        logger.error('Regex parse failed:', error)
+        return { nodes: [], edges: [], success: false, error: error instanceof Error ? error.message : 'Unknown regex parsing error' }
     }
+}
+
+/**
+ * Parse TypeScript LangGraph code: AST-first, then regex fallback
+ */
+export function parseTypeScriptCode(code: string): ParseResult {
+    // Try AST
+    const astResult = parseTypeScriptCodeAST(code)
+    const astHasGraph = astResult.success && (astResult.nodes.length > 0 || astResult.edges.length > 0)
+    if (astHasGraph) return astResult
+
+    // Fallback to regex
+    const regexResult = parseTypeScriptCodeRegex(code)
+    return regexResult
 }
 
 /**
