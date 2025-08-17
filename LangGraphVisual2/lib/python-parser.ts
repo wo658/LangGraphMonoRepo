@@ -20,6 +20,11 @@ function parseLangGraphCodeRegexSimple(code: string): ParseResult {
         // Local regex to avoid shared lastIndex
         const nodeRe = /(\w+)\.add_node\(([^)]+)\)/g
         const edgeRe = /(\w+)\.add_edge\(([^)]+)\)/g
+        const nodeDefRe = /(\w+)\s*=\s*Node\(([^)]+)\)/g
+        // Node literals inside dicts/lists/etc.
+        const nodeLiteralRe = /\bNode\(([^)]+)\)/g
+        // General .add_edge calls where the callee can be an indexed expression like nodes['A']
+        const edgeCallRe = /([A-Za-z0-9_\[\]\.'"\s]+)\.add_edge\(([^)]+)\)/g
 
         // Nodes from add_node
         for (const m of code.matchAll(nodeRe)) {
@@ -31,25 +36,65 @@ function parseLangGraphCodeRegexSimple(code: string): ParseResult {
             }
         }
 
+        // Nodes from variable assignments like: foo = Node("Label")
+        for (const m of code.matchAll(nodeDefRe)) {
+            const varName = cleanIdentifier(m[1] || '')
+            const args = extractArguments(`(${m[2]})`)
+            const labelRaw = args[0] ? cleanIdentifier(args[0]) : varName
+            const id = varName
+            if (id && !nodeSet.has(id)) {
+                nodeSet.add(id)
+                nodes.push({ id, label: labelRaw || createNodeLabel(id), type: 'default' })
+            }
+        }
+
+        // Nodes from Node("Label") occurrences (e.g., inside dict literals)
+        for (const m of code.matchAll(nodeLiteralRe)) {
+            const args = extractArguments(`(${m[1]})`)
+            const id = cleanIdentifier(args[0] || '')
+            if (id && !nodeSet.has(id)) {
+                nodeSet.add(id)
+                nodes.push({ id, label: createNodeLabel(id), type: 'default' })
+            }
+        }
+
         // Edges from add_edge (and ensure endpoints exist as nodes)
         let counter = 1
-        for (const m of code.matchAll(edgeRe)) {
+        for (const m of code.matchAll(edgeCallRe)) {
             const args = extractArguments(`(${m[2]})`)
             let source = ''
             let target = ''
             let label: string | undefined
 
+            // Determine source from the callee expression (e.g., nodes['A'])
+            source = resolveNodeIdFromExpr(m[1] || '')
+
             if (args.length >= 2) {
-                // Standard form: add_edge(source, target[, label])
-                source = cleanIdentifier(args[0] || '')
-                target = cleanIdentifier(args[1] || '')
-                if (args[2]) label = cleanIdentifier(args[2])
+                // Standard form with explicit target and optional label
+                target = resolveNodeIdFromExpr(args[1] || '')
+                const firstAsSource = resolveNodeIdFromExpr(args[0] || '')
+                // If first arg also looks like a node id, prefer callee as source and first arg as target
+                // But many user codes use method-style: obj.add_edge(target)
+                // So when there are 2 args, treat as (target, label)
+                if (!target) {
+                    target = resolveNodeIdFromExpr(args[0] || '')
+                    if (args[1]) label = cleanIdentifier(args[1])
+                } else {
+                    // We detected a valid second-arg target, then first is likely source; override source
+                    source = firstAsSource || source
+                }
+                if (!label && args[2]) label = cleanIdentifier(args[2])
             } else if (args.length === 1) {
-                // Constructor form: add_edge(Edge(target, time)) -> source is the object before .add_edge
-                const innerArgs = extractArguments(args[0])
-                source = cleanIdentifier(m[1] || '')
-                target = cleanIdentifier(innerArgs[0] || '')
-                if (innerArgs[1]) label = cleanIdentifier(innerArgs[1])
+                // Method form: obj.add_edge(targetExpr)
+                const inner = args[0]
+                // Constructor form support: Edge(target, time)
+                if (/^\s*Edge\s*\(/.test(inner)) {
+                    const innerArgs = extractArguments(inner)
+                    target = resolveNodeIdFromExpr(innerArgs[0] || '')
+                    if (innerArgs[1]) label = cleanIdentifier(innerArgs[1])
+                } else {
+                    target = resolveNodeIdFromExpr(inner)
+                }
             }
 
             if (!source || !target) continue
@@ -227,7 +272,44 @@ function cleanIdentifier(identifier: string): string {
         const parts = cleaned.split('.')
         cleaned = parts[parts.length - 1]
     }
+    // Normalize special sentinels
+    if (cleaned === 'START') cleaned = '__start__'
+    if (cleaned === 'END') cleaned = '__end__'
     return cleaned.trim()
+}
+
+// Resolve node id from various expression forms (e.g., nodes['A'], "A", Node("A"), nodes.A, Enum.VALUE)
+function resolveNodeIdFromExpr(expr: string): string {
+    if (!expr) return ''
+    let s = stripInlineComment(String(expr)).trim()
+
+    // Node("Label") pattern
+    const nodeMatch = s.match(/^\s*Node\s*\(([^)]*)\)\s*$/)
+    if (nodeMatch) {
+        const args = extractArguments(`(${nodeMatch[1]})`)
+        return cleanIdentifier(args[0] || '')
+    }
+
+    // Indexing: obj["A"] or obj['A'] (optionally with one dot segment before index)
+    const indexMatch = s.match(/^\s*[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)?\s*\[\s*(["'`])([^"'`]+)\1\s*\]\s*$/)
+    if (indexMatch) {
+        return cleanIdentifier(indexMatch[2])
+    }
+
+    // Attribute access: obj.A
+    const attrMatch = s.match(/^\s*[A-Za-z_]\w*\s*\.\s*([A-Za-z_]\w*)\s*$/)
+    if (attrMatch) {
+        return cleanIdentifier(attrMatch[1])
+    }
+
+    // Quoted string literal
+    const strMatch = s.match(/^\s*(["'`])([^"'`]+)\1\s*$/)
+    if (strMatch) {
+        return cleanIdentifier(strMatch[2])
+    }
+
+    // Fallback: identifier or dotted enum-like value
+    return cleanIdentifier(s)
 }
 
 function createNodeLabel(id: string): string {

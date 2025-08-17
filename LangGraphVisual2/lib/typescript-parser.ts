@@ -624,17 +624,20 @@ function parseTypeScriptCodeRegex(code: string): ParseResult {
 }
 
 /**
- * Parse TypeScript LangGraph code: AST-first, then regex fallback
+ * Parse TypeScript LangGraph code.
+ * For consistency with the Python parser, we attempt an AST parse opportunistically
+ * (for validation/telemetry), but we always build the final result from the regex parser.
  */
 export function parseTypeScriptCode(code: string): ParseResult {
-    // Try AST
-    const astResult = parseTypeScriptCodeAST(code)
-    const astHasGraph = astResult.success && (astResult.nodes.length > 0 || astResult.edges.length > 0)
-    if (astHasGraph) return astResult
+    try {
+        // Best-effort AST parse (ignore result to keep behavior consistent with Python parser)
+        void parseTypeScriptCodeAST(code)
+    } catch {
+        // Ignore AST errors
+    }
 
-    // Fallback to regex
-    const regexResult = parseTypeScriptCodeRegex(code)
-    return regexResult
+    // Always return regex-based extraction to keep behavior predictable and aligned with Python
+    return parseTypeScriptCodeRegex(code)
 }
 
 /**

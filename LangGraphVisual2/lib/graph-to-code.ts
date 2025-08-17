@@ -72,6 +72,38 @@ const CodeGenerationUtils = {
 } as const
 
 /**
+ * Normalize a LangGraph by de-duplicating nodes and edges.
+ * - Nodes: unique by id (first occurrence wins)
+ * - Edges: unique by source-target-label triplet (first occurrence wins)
+ */
+function normalizeGraph(graph: LangGraph): LangGraph {
+  if (!graph) return graph
+
+  // Deduplicate nodes by id (preserve first occurrence)
+  const seenNodes = new Set<string>()
+  const nodes = [] as LangGraph["nodes"]
+  for (const n of graph.nodes || []) {
+    if (!seenNodes.has(n.id)) {
+      seenNodes.add(n.id)
+      nodes.push(n)
+    }
+  }
+
+  // Deduplicate edges by key: source|target|label
+  const seenEdges = new Set<string>()
+  const edges = [] as LangGraph["edges"]
+  for (const e of graph.edges || []) {
+    const key = `${e.source}|${e.target}|${e.label ?? ''}`
+    if (!seenEdges.has(key)) {
+      seenEdges.add(key)
+      edges.push(e)
+    }
+  }
+
+  return { nodes, edges }
+}
+
+/**
  * Code generation strategies using Strategy Pattern
  */
 interface CodeGenerator {
@@ -232,8 +264,10 @@ class PythonCodeGenerator {
       return ""
     }
 
+    const normalized = normalizeGraph(graph)
+
     return this.generators
-      .map(generator => generator.generate(graph))
+      .map(generator => generator.generate(normalized))
       .join('\n')
   }
 
@@ -255,11 +289,13 @@ export function generatePythonCode(graph: LangGraph): string {
 
 // Universal code generator that supports all languages
 export function generateCode(graph: LangGraph, language: SupportedLanguage): string {
+  const normalized = normalizeGraph(graph)
   switch (language) {
     case 'python':
-      return generatePythonCode(graph)
+      // generatePythonCode internally normalizes as well for safety
+      return generatePythonCode(normalized)
     case 'typescript':
-      return generateTypeScriptCode(graph)
+      return generateTypeScriptCode(normalized)
     default:
       throw new Error(`Unsupported language: ${language}`)
   }
