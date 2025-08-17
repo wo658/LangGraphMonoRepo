@@ -153,10 +153,46 @@ class EdgesGenerator implements CodeGenerator {
   }
 
   private generateConditionalEdges(graph: LangGraph): string {
-    return graph.edges
-      .filter(edge => edge.label && edge.label !== '')
-      .map(edge => `# TODO: Add conditional edge logic for ${edge.source} -> ${edge.target} (condition: ${edge.label})`)
-      .join('\n')
+    // Group labeled edges by source to build a mapping per source
+    const bySource = new Map<string, { label: string; target: string }[]>()
+    for (const e of graph.edges) {
+      if (e.label && e.label !== '') {
+        if (!bySource.has(e.source)) bySource.set(e.source, [])
+        bySource.get(e.source)!.push({ label: String(e.label), target: e.target })
+      }
+    }
+
+    if (bySource.size === 0) return ''
+
+    const parts: string[] = []
+    for (const [source, items] of bySource.entries()) {
+      // Build unique label->target mapping (last one wins if duplicates)
+      const mapping = new Map<string, string>()
+      for (const { label, target } of items) {
+        mapping.set(label, target)
+      }
+
+      const funcName = `route_${source.replace(/[^a-zA-Z0-9_]/g, '_').replace(/^[0-9]/, '_$&')}`
+      const labels = Array.from(mapping.keys())
+
+      // Emit a minimal routing function stub so the code is runnable and parsable
+      parts.push(`
+def ${funcName}(state: State):
+    """Routing logic for ${source}. Must return one of: ${labels.map(l => `'${l}'`).join(', ')}"""
+    # TODO: Implement routing; return a label matching one of the mapping keys below
+    return ${labels.length > 0 ? `'${labels[0]}'` : "''"}
+`)
+
+      // Emit add_conditional_edges with mapping
+      const sourceRef = source === '__start__' ? 'START' : `"${source}"`
+      const mappingEntries = Array.from(mapping.entries())
+        .map(([label, target]) => `    "${label}": ${target === '__end__' ? 'END' : `"${target}"`}`)
+        .join(',\n')
+
+      parts.push(`workflow.add_conditional_edges(${sourceRef}, ${funcName}, {\n${mappingEntries}\n})`)
+    }
+
+    return parts.join('\n')
   }
 
   private formatDirectEdge(edge: GraphEdge): string {

@@ -46,3 +46,38 @@ export async function logout(): Promise<boolean> {
 export function getOAuthUrl(provider: 'github' | 'google'): string {
   return `${API_BASE_URL}/auth/${provider}`
 }
+
+// AI generate types and client
+export type AiGenerateRequest = {
+  language: 'python' | 'typescript' | 'javascript'
+  instruction: string
+  code?: string
+  stream?: boolean
+}
+
+export type AiGenerateResponse = {
+  message: string
+  code: string
+  usage: { promptTokens: number; completionTokens: number; totalTokens: number }
+  model: string
+}
+
+export async function aiGenerate(req: AiGenerateRequest): Promise<AiGenerateResponse> {
+  const res = await fetch(`${API_BASE_URL}/ai/generate`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`AI generate failed: ${res.status} ${text}`)
+  }
+  const data = (await res.json()) as Partial<AiGenerateResponse>
+  return {
+    message: typeof data.message === 'string' ? data.message : '',
+    code: typeof data.code === 'string' ? data.code : '',
+    usage: data.usage || { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    model: data.model || '',
+  }
+}

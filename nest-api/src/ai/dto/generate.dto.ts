@@ -7,6 +7,7 @@ export class GenerateRequestDto {
 
 export class GenerateResponseDto {
   message!: string;
+  code!: string;
   usage!: {
     promptTokens: number;
     completionTokens: number;

@@ -35,8 +35,23 @@ function parseLangGraphCodeRegexSimple(code: string): ParseResult {
         let counter = 1
         for (const m of code.matchAll(edgeRe)) {
             const args = extractArguments(`(${m[2]})`)
-            const source = cleanIdentifier(args[0] || '')
-            const target = cleanIdentifier(args[1] || '')
+            let source = ''
+            let target = ''
+            let label: string | undefined
+
+            if (args.length >= 2) {
+                // Standard form: add_edge(source, target[, label])
+                source = cleanIdentifier(args[0] || '')
+                target = cleanIdentifier(args[1] || '')
+                if (args[2]) label = cleanIdentifier(args[2])
+            } else if (args.length === 1) {
+                // Constructor form: add_edge(Edge(target, time)) -> source is the object before .add_edge
+                const innerArgs = extractArguments(args[0])
+                source = cleanIdentifier(m[1] || '')
+                target = cleanIdentifier(innerArgs[0] || '')
+                if (innerArgs[1]) label = cleanIdentifier(innerArgs[1])
+            }
+
             if (!source || !target) continue
             if (!nodeSet.has(source)) {
                 nodeSet.add(source)
@@ -46,7 +61,9 @@ function parseLangGraphCodeRegexSimple(code: string): ParseResult {
                 nodeSet.add(target)
                 nodes.push({ id: target, label: createNodeLabel(target), type: 'default' })
             }
-            edges.push({ id: `e${counter++}`, source, target })
+            const edge: ParsedEdge = { id: `e${counter++}`, source, target }
+            if (label) edge.label = label
+            edges.push(edge)
         }
 
         const success = nodes.length > 0 || edges.length > 0
@@ -101,19 +118,46 @@ export interface ParseResult {
  * @returns Array of extracted arguments
  */
 const extractArguments = (text: string): string[] => {
-    const match = text.match(/\(([^)]+)\)/)
-    if (!match) return []
-
-    return parseArgumentString(match[1])
+    const start = text.indexOf('(')
+    if (start === -1) return []
+    let inQuotes = false
+    let quoteChar = ''
+    let depthParen = 0
+    // scan to find the matching closing parenthesis of the first '('
+    for (let i = start; i < text.length; i++) {
+        const ch = text[i]
+        if ((!inQuotes && (ch === '"' || ch === "'")) || (inQuotes && ch === quoteChar)) {
+            if (!inQuotes) {
+                inQuotes = true
+                quoteChar = ch
+            } else {
+                inQuotes = false
+                quoteChar = ''
+            }
+        } else if (!inQuotes) {
+            if (ch === '(') depthParen++
+            else if (ch === ')') {
+                depthParen--
+                if (depthParen === 0) {
+                    const inner = text.slice(start + 1, i)
+                    return parseArgumentString(inner)
+                }
+            }
+        }
+    }
+    // fallback: no closing paren found, parse the rest
+    const innerFallback = text.slice(start + 1)
+    return parseArgumentString(innerFallback)
 }
 
 /**
- * Parses a comma-separated argument string while respecting quotes and nested structures
+ * Parses a comma-separated argument string while respecting quotes and nested (), {} structures
  */
- const parseArgumentString = (argString: string): string[] => {
+const parseArgumentString = (argString: string): string[] => {
     const args: string[] = []
     let current = ''
-    let depth = 0
+    let depthParen = 0
+    let depthBrace = 0
     let inQuotes = false
     let quoteChar = ''
 
@@ -122,9 +166,11 @@ const extractArguments = (text: string): string[] => {
             inQuotes = !inQuotes
             quoteChar = inQuotes ? char : ''
         } else if (!inQuotes) {
-            if (char === '{') depth++
-            else if (char === '}') depth--
-            else if (char === ',' && depth === 0) {
+            if (char === '(') depthParen++
+            else if (char === ')') depthParen = Math.max(0, depthParen - 1)
+            else if (char === '{') depthBrace++
+            else if (char === '}') depthBrace = Math.max(0, depthBrace - 1)
+            else if (char === ',' && depthParen === 0 && depthBrace === 0) {
                 if (current.trim()) args.push(current.trim())
                 current = ''
                 continue

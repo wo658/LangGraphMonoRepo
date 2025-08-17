@@ -45,6 +45,7 @@ export class AiController {
       type: 'object',
       properties: {
         message: { type: 'string' },
+        code: { type: 'string' },
         usage: {
           type: 'object',
           properties: {
@@ -86,8 +87,40 @@ export class AiController {
     // Deduct actual usage
     await this.aiUsageService.increment(userId, result.usage.total_tokens || 0);
 
+    // Parse strict JSON { message, code } from assistant
+    const parsed = (() => {
+      const raw = (result.message || '').trim();
+      if (!raw) return { message: '', code: '' };
+      const stripFences = (s: string) => s.replace(/^```[a-zA-Z]*\n?/, '').replace(/```\s*$/, '').trim();
+      const tryJson = (s: string) => {
+        try { return JSON.parse(s); } catch { return null; }
+      };
+      // Try direct JSON
+      let obj = tryJson(raw);
+      if (!obj) {
+        // Try fenced block
+        obj = tryJson(stripFences(raw));
+      }
+      if (!obj) {
+        // Try to extract first {...} block
+        const first = raw.indexOf('{');
+        const last = raw.lastIndexOf('}');
+        if (first !== -1 && last !== -1 && last > first) {
+          obj = tryJson(raw.slice(first, last + 1));
+        }
+      }
+      if (obj && typeof obj === 'object') {
+        const message = typeof obj.message === 'string' ? obj.message : '';
+        const code = typeof obj.code === 'string' ? obj.code : '';
+        return { message, code };
+      }
+      // Fallback: treat all as message
+      return { message: raw, code: '' };
+    })();
+
     return {
-      message: result.message,
+      message: parsed.message,
+      code: parsed.code,
       usage: {
         promptTokens: result.usage.prompt_tokens,
         completionTokens: result.usage.completion_tokens,

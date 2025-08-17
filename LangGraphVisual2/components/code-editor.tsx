@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Play, Minimize2, Settings, Code2, Sparkles } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { API_BASE_URL } from '@/lib/api'
+import { aiGenerate } from '@/lib/api'
 import { pythonSnippets } from '@/utils/python-snippets'
 import { typescriptSnippets } from '@/utils/typescript-snippets'
 import { useLanguage, useEditorActions } from '@/stores/editor-store'
@@ -53,7 +53,8 @@ export function CodeEditor({
   const [aiOpen, setAiOpen] = useState(false)
   const [aiInstruction, setAiInstruction] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
-  const [aiResult, setAiResult] = useState<string | null>(null)
+  const [aiMessage, setAiMessage] = useState<string | null>(null)
+  const [aiCode, setAiCode] = useState<string>('')
   const [aiError, setAiError] = useState<string | null>(null)
   const editorRef = useRef<any>(null)
   const examplesRef = useRef<HTMLDivElement>(null)
@@ -67,7 +68,8 @@ export function CodeEditor({
   const handleAIOpen = useCallback(() => {
     setAiOpen(true)
     setAiInstruction('')
-    setAiResult(null)
+    setAiMessage(null)
+    setAiCode('')
     setAiError(null)
   }, [])
 
@@ -78,32 +80,18 @@ export function CodeEditor({
     }
     setAiLoading(true)
     setAiError(null)
-    setAiResult(null)
+    setAiMessage(null)
     try {
-      const res = await fetch(`${API_BASE_URL}/ai/generate`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          language,
-          instruction: aiInstruction,
-          code: value,
-          stream: false,
-        }),
-      })
-      const data = await res.json().catch(() => null)
-      if (!res.ok) {
-        const msg = (data && (data.message || data.error)) || `Request failed: ${res.status}`
-        setAiError(msg)
-        return
-      }
-      setAiResult((data && data.message) || '')
+      const inputCode = aiCode && aiCode.trim().length > 0 ? aiCode : value
+      const data = await aiGenerate({ language, instruction: aiInstruction, code: inputCode, stream: false })
+      setAiMessage(data.message || '')
+      setAiCode((data.code ?? '').length > 0 ? data.code : (aiCode || ''))
     } catch (e: any) {
       setAiError(e?.message || 'Network error')
     } finally {
       setAiLoading(false)
     }
-  }, [aiInstruction, language, value])
+  }, [aiInstruction, language, value, aiCode])
 
   // 언어 변경 핸들러 메모이제이션
   const handleLanguageChange = useCallback((value: 'python' | 'typescript') => {
@@ -578,17 +566,26 @@ declare global {
               )}
             </div>
 
-            {aiResult && (
+            {(aiMessage || aiCode) && (
               <div className="space-y-2">
-                <Label>Result</Label>
-                <pre className="whitespace-pre-wrap text-xs p-3 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 max-h-[300px] overflow-auto">
-{aiResult}
-                </pre>
+                {aiMessage && (
+                  <>
+                    <Label>Message</Label>
+                    <pre className="whitespace-pre-wrap text-xs p-3 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 max-h-[200px] overflow-auto">{aiMessage}</pre>
+                  </>
+                )}
+                {aiCode && (
+                  <>
+                    <Label>Code</Label>
+                    <pre className="whitespace-pre text-xs p-3 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 max-h-[300px] overflow-auto">{aiCode}</pre>
+                  </>
+                )}
                 <div className="flex justify-end">
                   <Button
                     type="button"
                     variant="secondary"
-                    onClick={() => { onChange(aiResult); setAiOpen(false) }}
+                    disabled={!aiCode}
+                    onClick={() => { onChange(aiCode); setAiOpen(false) }}
                   >
                     Apply to editor
                   </Button>
