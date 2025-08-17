@@ -36,8 +36,6 @@ interface CodeEditorProps {
   className?: string
 }
 
-// 언어 감지 로직은 '@/lib/language-detect'로 이동되었습니다.
-
 export function CodeEditor({
   value,
   onChange,
