@@ -30,16 +30,20 @@ export const useGraphStore = create<GraphStore>()(
       ...initialState,
 
       updateGraph: (graph: LangGraph) => {
-        set({ graph })
+        // Normalize incoming graph to use internal special IDs
+        const normalized = normalizeGraphSpecialIds(graph)
+        set({ graph: normalized })
       },
 
       addNode: (node: GraphNode, position?: Position) => {
         const { graph } = get()
         if (!graph) {
           // Create new graph with the node
+          const n = normalizeNodeSpecialIds({ ...node, position })
           const newGraph: LangGraph = {
-            nodes: [{ ...node, position }],
-            edges: []
+            nodes: [n],
+            edges: [],
+            entryPoint: undefined,
           }
           set({ graph: newGraph })
           return
@@ -47,7 +51,7 @@ export const useGraphStore = create<GraphStore>()(
 
         const updatedGraph: LangGraph = {
           ...graph,
-          nodes: [...graph.nodes, { ...node, position }]
+          nodes: [...graph.nodes, normalizeNodeSpecialIds({ ...node, position })]
         }
         set({ graph: updatedGraph })
       },
@@ -55,11 +59,11 @@ export const useGraphStore = create<GraphStore>()(
       removeNode: (nodeId: string) => {
         const { graph } = get()
         if (!graph) return
-
+        const nid = normalizeId(nodeId)
         const updatedGraph: LangGraph = {
           ...graph,
-          nodes: graph.nodes.filter(node => node.id !== nodeId),
-          edges: graph.edges.filter(edge => edge.source !== nodeId && edge.target !== nodeId)
+          nodes: graph.nodes.filter(node => node.id !== nid),
+          edges: graph.edges.filter(edge => edge.source !== nid && edge.target !== nid)
         }
         set({ graph: updatedGraph })
       },
@@ -67,10 +71,10 @@ export const useGraphStore = create<GraphStore>()(
       addEdge: (edge: GraphEdge) => {
         const { graph } = get()
         if (!graph) return
-
+        const e = normalizeEdgeSpecialIds(edge)
         const updatedGraph: LangGraph = {
           ...graph,
-          edges: [...graph.edges, edge]
+          edges: [...graph.edges, e]
         }
         set({ graph: updatedGraph })
       },
@@ -139,3 +143,32 @@ export const useGraphActions = () => useGraphStore(
     clearGraph: state.clearGraph,
   }))
 )
+
+// --- Internal helpers to normalize special node aliases ---
+function normalizeId(id: string): string {
+  if (!id) return id
+  if (id === 'START') return '__start__'
+  if (id === 'END') return '__end__'
+  return id
+}
+
+function normalizeNodeSpecialIds(node: GraphNode): GraphNode {
+  const nid = normalizeId(node.id)
+  return { ...node, id: nid }
+}
+
+function normalizeEdgeSpecialIds(edge: GraphEdge): GraphEdge {
+  return { ...edge, source: normalizeId(edge.source), target: normalizeId(edge.target) }
+}
+
+function normalizeGraphSpecialIds(graph: LangGraph): LangGraph {
+  return {
+    ...graph,
+    nodes: (graph.nodes || []).map(normalizeNodeSpecialIds),
+    edges: (graph.edges || [])
+      .map(normalizeEdgeSpecialIds)
+      // Filter out implicit entry edges so they don't persist in store/state
+      .filter(e => e.id !== 'e_entry' && e.source !== '__start__'),
+    entryPoint: graph.entryPoint ? normalizeId(graph.entryPoint) : undefined,
+  }
+}

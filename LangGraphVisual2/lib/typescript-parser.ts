@@ -230,16 +230,7 @@ function extractConditionalEdgesAST(
         const mappingArg = args[2]
         if (!source || !mappingArg || !ts.isObjectLiteralExpression(mappingArg)) return
 
-        let conditionLabel = 'Condition'
-        if (ts.isIdentifier(conditionArg)) conditionLabel = conditionArg.text
-        else if (ts.isPropertyAccessExpression(conditionArg)) conditionLabel = conditionArg.name.text
-
-        const conditionNodeId = `${source}_condition`
-        if (!nodeSet.has(conditionNodeId)) {
-            nodeSet.add(conditionNodeId)
-            nodes.push({ id: conditionNodeId, label: conditionLabel || 'Condition', type: 'default' })
-        }
-        edges.push({ id: `e${edgeCounter++}`, source, target: conditionNodeId })
+        // We no longer create intermediate condition nodes. Edges are labeled directly from source to targets.
 
         mappingArg.properties.forEach(prop => {
             if (!ts.isPropertyAssignment(prop)) return
@@ -247,7 +238,7 @@ function extractConditionalEdgesAST(
             const condition = cleanIdentifier(key)
             const target = exprToIdentifier(prop.initializer as ts.Expression)
             if (condition && target) {
-                edges.push({ id: `e${edgeCounter++}`, source: conditionNodeId, target, label: condition, animated: true })
+                edges.push({ id: `e${edgeCounter++}`, source, target, label: condition, animated: true })
             }
         })
     })
@@ -369,35 +360,17 @@ function extractConditionalEdges(
     const edges: ParsedEdge[] = []
     let match: RegExpExecArray | null
     let edgeCounter = 100 // Start from 100 to avoid ID conflicts
-    
+
     // Reset regex
     TS_PATTERNS.ADD_CONDITIONAL.lastIndex = 0
-    
+
     while ((match = TS_PATTERNS.ADD_CONDITIONAL.exec(code)) !== null) {
         const source = cleanIdentifier(match[2])
         const conditionFunc = match[3].trim()
         const mappingStr = match[4]
-        
+
         if (!source || !mappingStr) continue
-        
-        // Add condition node if needed
-        const conditionNodeId = `${source}_condition`
-        if (!nodeSet.has(conditionNodeId)) {
-            nodeSet.add(conditionNodeId)
-            nodes.push({
-                id: conditionNodeId,
-                label: conditionFunc || 'Condition',
-                type: "default"
-            })
-        }
-        
-        // Add edge from source to condition
-        edges.push({
-            id: `e${edgeCounter++}`,
-            source,
-            target: conditionNodeId
-        })
-        
+
         // Parse mapping object
         let mappingMatch: RegExpExecArray | null
         TS_PATTERNS.MAPPING.lastIndex = 0
@@ -407,13 +380,7 @@ function extractConditionalEdges(
             const target = cleanIdentifier(mappingMatch[2])
             
             if (condition && target) {
-                edges.push({
-                    id: `e${edgeCounter++}`,
-                    source: conditionNodeId,
-                    target,
-                    label: condition,
-                    animated: true
-                })
+                edges.push({ id: `e${edgeCounter++}`, source, target, label: condition, animated: true })
             }
         }
     }
@@ -594,23 +561,23 @@ function parseTypeScriptCodeRegex(code: string): ParseResult {
         const directEdges = extractDirectEdges(code)
         const conditionalEdges = extractConditionalEdges(code, nodes, nodeSet)
         
-        // Combine edges
-        const allEdges = [...directEdges, ...conditionalEdges]
+        // Base edges (exclude implicit entry edge during node augmentation & layout)
+        const baseEdges = [...directEdges, ...conditionalEdges]
         
-        // Add entry point
+        // Detect entry point edge but do not include it in layout/special node augmentation
         const entryEdge = extractEntryPoint(code)
-        if (entryEdge) {
-            allEdges.push(entryEdge)
-        }
         
-        // Add special nodes
-        addSpecialNodes(nodes, allEdges, nodeSet)
+        // Add special nodes only based on base edges (prevents adding __start__ solely due to entry)
+        addSpecialNodes(nodes, baseEdges, nodeSet)
         
-        // Layout nodes
-        layoutNodes(nodes, allEdges)
+        // Layout nodes based on base edges
+        layoutNodes(nodes, baseEdges)
         
-        // Mark feedback loops
-        markLoopFeedbackEdges(allEdges, nodes)
+        // Mark feedback loops on base edges
+        markLoopFeedbackEdges(baseEdges, nodes)
+        
+        // Final edges include entry edge (so convertToLangGraph can pick entryPoint and later strip it)
+        const allEdges = entryEdge ? [...baseEdges, entryEdge] : baseEdges
         
         return {
             nodes,
@@ -648,6 +615,9 @@ export function convertToLangGraph(parseResult: ParseResult): LangGraph | null {
         return null
     }
     
+    const entry = parseResult.edges.find(e => e.id === 'e_entry')
+    // Remove the implicit START -> entry edge from final edges when entryPoint is specified
+    const filteredEdges = parseResult.edges.filter(e => e.id !== 'e_entry')
     return {
         nodes: parseResult.nodes.map(node => ({
             id: node.id,
@@ -655,13 +625,14 @@ export function convertToLangGraph(parseResult: ParseResult): LangGraph | null {
             type: node.type,
             position: node.position || { x: 0, y: 0 }
         })),
-        edges: parseResult.edges.map(edge => ({
+        edges: filteredEdges.map(edge => ({
             id: edge.id,
             source: edge.source,
             target: edge.target,
             label: edge.label,
             animated: edge.animated || false,
             isLoopFeedback: edge.isLoopFeedback || false
-        }))
+        })),
+        entryPoint: entry ? entry.target : undefined,
     }
 }

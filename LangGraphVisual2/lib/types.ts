@@ -25,6 +25,8 @@ export interface GraphEdge {
 export interface LangGraph {
   nodes: GraphNode[]
   edges: GraphEdge[]
+  // Optional entry point node id (when set_entry_point was specified in code)
+  entryPoint?: string
 }
 
 // Derived graph helpers

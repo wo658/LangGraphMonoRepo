@@ -1,65 +1,13 @@
 // Convert LangGraph back to TypeScript code
 import type { LangGraph, GraphNode, GraphEdge } from "@/lib/types"
+import { SPECIAL_NODES, sanitizeFunctionName, normalizeGraph } from "./codegen-shared"
 
-// (JavaScript support removed)
-
-// Constants for better maintainability
-const SPECIAL_NODES = ['__start__', '__end__'] as const
-
-// Utility functions for TypeScript code generation
-const TSCodeGenerationUtils = {
-  /**
-   * Sanitizes a node ID to be a valid TypeScript function name
-   */
-  sanitizeFunctionName(id: string): string {
-    return id.replace(/[^a-zA-Z0-9_]/g, '_').replace(/^[0-9]/, '_$&')
-  },
-
-  /**
-   * Checks if a node is a special system node
-   */
-  isSpecialNode(nodeId: string): boolean {
-    return SPECIAL_NODES.includes(nodeId as any)
-  },
-
-  /**
-   * Formats a node reference for TypeScript code (string constants)
-   */
-  formatNodeReference(nodeId: string): string {
-    if (nodeId === '__start__') return '"START"'
-    if (nodeId === '__end__') return '"END"'
-    return `"${nodeId}"`
-  },
-
-  /**
-   * Validates that a graph has the minimum required structure
-   */
-  validateGraphStructure(graph: LangGraph): { isValid: boolean; errors: string[] } {
-    const errors: string[] = []
-    
-    if (!graph.nodes || graph.nodes.length === 0) {
-      errors.push('Graph must contain at least one node')
-    }
-    
-    // Check for duplicate node IDs
-    const nodeIds = graph.nodes.map(n => n.id)
-    const duplicates = nodeIds.filter((id, index) => nodeIds.indexOf(id) !== index)
-    if (duplicates.length > 0) {
-      errors.push(`Duplicate node IDs found: ${duplicates.join(', ')}`)
-    }
-    
-    // Check for edges referencing non-existent nodes
-    const validNodeIds = new Set(nodeIds.concat(SPECIAL_NODES))
-    const invalidEdges = graph.edges.filter(edge => 
-      !validNodeIds.has(edge.source) || !validNodeIds.has(edge.target)
-    )
-    if (invalidEdges.length > 0) {
-      errors.push(`Edges reference non-existent nodes: ${invalidEdges.map(e => `${e.source}->${e.target}`).join(', ')}`)
-    }
-    
-    return { isValid: errors.length === 0, errors }
-  }
-} as const
+// TS-specific helper for node ref formatting
+function tsRef(nodeId: string): string {
+  if (nodeId === '__start__') return 'START'
+  if (nodeId === '__end__') return 'END'
+  return `"${nodeId}"`
+}
 
 /**
  * Code generation strategies using Strategy Pattern
@@ -70,7 +18,7 @@ interface TSCodeGenerator {
 
 class TSImportsGenerator implements TSCodeGenerator {
   generate(_graph: LangGraph): string {
-    return `import { StateGraph } from "langgraph"
+    return `import { StateGraph, START, END } from "langgraph"
 
 // Define the state interface
 interface WorkflowState {
@@ -93,19 +41,13 @@ class TSNodeFunctionsGenerator implements TSCodeGenerator {
 
   private generateNodeFunction(node: GraphNode): string {
     const sanitizedId = this.sanitizeFunctionName(node.id)
-
     return `
-
 // ${node.label}
-const ${sanitizedId} = async (state: WorkflowState): Promise<WorkflowState> => {
-  console.log("Processing ${node.label}:", state)
-  // TODO: Implement ${node.label} logic
-  return { ...state, currentStep: "${node.id}" }
-}`
+const ${sanitizedId} = async (state: WorkflowState): Promise<WorkflowState> => state`
   }
 
   private sanitizeFunctionName(id: string): string {
-    return TSCodeGenerationUtils.sanitizeFunctionName(id)
+    return sanitizeFunctionName(id)
   }
 }
 
@@ -130,7 +72,7 @@ const workflow = new StateGraph(WorkflowState)
   }
 
   private sanitizeFunctionName(id: string): string {
-    return TSCodeGenerationUtils.sanitizeFunctionName(id)
+    return sanitizeFunctionName(id)
   }
 }
 
@@ -147,8 +89,10 @@ class TSEdgesGenerator implements TSCodeGenerator {
   }
 
   private generateDirectEdges(graph: LangGraph): string {
-    return graph.edges
+    const edges = graph.edges
       .filter(edge => !edge.label || edge.label === '')
+
+    return edges
       .map(edge => this.formatDirectEdge(edge))
       .join('\n')
   }
@@ -170,23 +114,24 @@ class TSEdgesGenerator implements TSCodeGenerator {
     let result = ''
     edgeGroups.forEach((edges, source) => {
       const routingFunctionName = `route${this.capitalizeFirst(source)}`
+      const labels = edges.map(e => String(e.label))
       
       // Generate routing function
       result += `
 // Routing function for ${source}
 const ${routingFunctionName} = (state: WorkflowState): string => {
   // TODO: Implement routing logic
-  // Return one of: ${edges.map(e => `"${e.label}"`).join(', ')}
-  return "default"
+  // Return one of: ${labels.map(l => `"${l}"`).join(', ')}
+  return ${labels.length > 0 ? `"${labels[0]}"` : `""`}
 }`
 
       // Generate mapping object
-      const mappings = edges.map(edge => `  "${edge.label}": "${edge.target}"`).join(',\n')
+      const mappings = edges.map(edge => `  "${edge.label}": ${tsRef(edge.target)}`).join(',\n')
       
       result += `
 
 // Add conditional edges for ${source}
-workflow.addConditionalEdges("${source}", ${routingFunctionName}, {
+workflow.addConditionalEdges(${tsRef(source)}, ${routingFunctionName}, {
 ${mappings}
 })`
     })
@@ -195,8 +140,8 @@ ${mappings}
   }
 
   private formatDirectEdge(edge: GraphEdge): string {
-    const source = TSCodeGenerationUtils.formatNodeReference(edge.source)
-    const target = TSCodeGenerationUtils.formatNodeReference(edge.target)
+    const source = tsRef(edge.source)
+    const target = tsRef(edge.target)
     return `workflow.addEdge(${source}, ${target})`
   }
 
@@ -207,11 +152,8 @@ ${mappings}
 
 class TSEntryPointGenerator implements TSCodeGenerator {
   generate(graph: LangGraph): string {
-    // Find the entry point (node that START points to)
-    const startEdge = graph.edges.find(edge => edge.source === '__start__')
-    const entryNode = startEdge ? startEdge.target : graph.nodes[0]?.id
-    
-    if (!entryNode || entryNode === '__end__') {
+    const entryNode = graph.entryPoint
+    if (!entryNode || entryNode === '__end__' || entryNode === '__start__') {
       return ''
     }
 
@@ -254,14 +196,10 @@ class TypeScriptCodeGenerator {
       return ""
     }
 
-    const validation = TSCodeGenerationUtils.validateGraphStructure(graph)
-    if (!validation.isValid) {
-      console.warn('Graph validation errors:', validation.errors)
-      // Continue generation but add comments about errors
-    }
+    const normalized = normalizeGraph(graph)
 
     return this.generators
-      .map(generator => generator.generate(graph))
+      .map(generator => generator.generate(normalized))
       .join('\n')
   }
 

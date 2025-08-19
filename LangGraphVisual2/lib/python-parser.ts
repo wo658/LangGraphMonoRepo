@@ -346,19 +346,10 @@ function extractConditionalEdgesSimple(
 
         if (!conditionFn) continue
 
-        // Ensure nodes exist
+        // Ensure source node exists
         if (source && !nodeSet.has(source)) {
             nodeSet.add(source)
             nodes.push({ id: source, label: createNodeLabel(source), type: 'default' })
-        }
-        if (!nodeSet.has(conditionFn)) {
-            nodeSet.add(conditionFn)
-            nodes.push({ id: conditionFn, label: createNodeLabel(conditionFn), type: 'default' })
-        }
-
-        // Edge from source to condition function (if source provided)
-        if (source) {
-            edges.push({ id: `e${edgeId++}`, source, target: conditionFn })
         }
 
         // Parse mapping dictionary entries: key -> target
@@ -371,11 +362,33 @@ function extractConditionalEdgesSimple(
                 nodeSet.add(target)
                 nodes.push({ id: target, label: createNodeLabel(target), type: 'default' })
             }
-            edges.push({ id: `e${edgeId++}`, source: conditionFn, target, label, animated: true })
+            // Create labeled conditional edge directly from source to target
+            if (source) {
+                edges.push({ id: `e${edgeId++}`, source, target, label, animated: true })
+            }
         }
     }
 
     return { edges, nextId: edgeId }
+}
+
+/**
+ * Extract entry point edge from set_entry_point calls
+ */
+function extractEntryPointSimple(code: string): ParsedEdge | null {
+    try {
+        const re = /(\w+)\.set_entry_point\(([^)]*)\)/g
+        for (const m of code.matchAll(re)) {
+            const args = extractArguments(`(${m[2]})`)
+            const entry = cleanIdentifier(args[0] || '')
+            if (entry) {
+                return { id: 'e_entry', source: '__start__', target: entry }
+            }
+        }
+    } catch {
+        // noop
+    }
+    return null
 }
 
 // Attempt AST-based parsing using optional @lezer/python
@@ -414,7 +427,10 @@ export async function parseLangGraphCodeAsync(code: string): Promise<ParseResult
         base.edges.length + 1
     )
 
-    const merged = { nodes: base.nodes, edges: [...base.edges, ...condEdges] }
+    const mergedEdges = [...base.edges, ...condEdges]
+    const entryEdge = extractEntryPointSimple(code)
+    if (entryEdge) mergedEdges.push(entryEdge)
+    const merged = { nodes: base.nodes, edges: mergedEdges }
     const success = merged.nodes.length > 0 || merged.edges.length > 0
     return { ...merged, success }
 }
@@ -446,6 +462,9 @@ export function convertToLangGraph(parseResult: ParseResult): LangGraph | null {
         }
     }
 
+    const entry = parseResult.edges.find(e => e.id === 'e_entry')
+    // Remove the implicit START -> entry edge from the final graph edges when entryPoint is specified
+    const filteredEdges = parseResult.edges.filter(e => e.id !== 'e_entry')
     return {
         nodes: parseResult.nodes.map(node => ({
             id: node.id,
@@ -453,14 +472,15 @@ export function convertToLangGraph(parseResult: ParseResult): LangGraph | null {
             type: node.type,
             position: node.position || { x: 0, y: 0 }
         })),
-        edges: parseResult.edges.map(edge => ({
+        edges: filteredEdges.map(edge => ({
             id: edge.id,
             source: edge.source,
             target: edge.target,
             label: edge.label,
             animated: edge.animated || false,
             isLoopFeedback: edge.isLoopFeedback || false
-        }))
+        })),
+        entryPoint: entry ? entry.target : undefined,
     }
 }
 

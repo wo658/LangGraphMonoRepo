@@ -1,12 +1,10 @@
 // Convert LangGraph back to Python/TypeScript code
 import type { LangGraph, GraphNode, GraphEdge } from "@/lib/types"
 import { generateTypeScriptCode } from "./typescript-code-generator"
+import { SPECIAL_NODES, sanitizeFunctionName, normalizeGraph } from "./codegen-shared"
 
 // Supported code generation languages
 export type SupportedLanguage = 'python' | 'typescript'
-
-// Constants for better maintainability
-const SPECIAL_NODES = ['__start__', '__end__'] as const
 const PYTHON_IMPORTS = `from typing import TypedDict
 from langgraph.graph import StateGraph, START, END
 
@@ -16,92 +14,9 @@ class State(TypedDict):
     pass
 ` as const
 
-// Utility functions for code generation
-const CodeGenerationUtils = {
-  /**
-   * Sanitizes a node ID to be a valid Python function name
-   */
-  sanitizeFunctionName(id: string): string {
-    return id.replace(/[^a-zA-Z0-9_]/g, '_').replace(/^[0-9]/, '_$&')
-  },
+// Note: validation helpers were removed for brevity; rely on normalizeGraph and minimal checks
 
-  /**
-   * Checks if a node is a special system node
-   */
-  isSpecialNode(nodeId: string): boolean {
-    return SPECIAL_NODES.includes(nodeId as any)
-  },
-
-  /**
-   * Formats a node reference for Python code
-   */
-  formatNodeReference(nodeId: string): string {
-    if (nodeId === '__start__') return 'START'
-    if (nodeId === '__end__') return 'END'
-    return `"${nodeId}"`
-  },
-
-  /**
-   * Validates that a graph has the minimum required structure
-   */
-  validateGraphStructure(graph: LangGraph): { isValid: boolean; errors: string[] } {
-    const errors: string[] = []
-    
-    if (!graph.nodes || graph.nodes.length === 0) {
-      errors.push('Graph must contain at least one node')
-    }
-    
-    // Check for duplicate node IDs
-    const nodeIds = graph.nodes.map(n => n.id)
-    const duplicates = nodeIds.filter((id, index) => nodeIds.indexOf(id) !== index)
-    if (duplicates.length > 0) {
-      errors.push(`Duplicate node IDs found: ${duplicates.join(', ')}`)
-    }
-    
-    // Check for edges referencing non-existent nodes
-    const validNodeIds = new Set(nodeIds.concat(SPECIAL_NODES))
-    const invalidEdges = graph.edges.filter(edge => 
-      !validNodeIds.has(edge.source) || !validNodeIds.has(edge.target)
-    )
-    if (invalidEdges.length > 0) {
-      errors.push(`Edges reference non-existent nodes: ${invalidEdges.map(e => `${e.source}->${e.target}`).join(', ')}`)
-    }
-    
-    return { isValid: errors.length === 0, errors }
-  }
-} as const
-
-/**
- * Normalize a LangGraph by de-duplicating nodes and edges.
- * - Nodes: unique by id (first occurrence wins)
- * - Edges: unique by source-target-label triplet (first occurrence wins)
- */
-function normalizeGraph(graph: LangGraph): LangGraph {
-  if (!graph) return graph
-
-  // Deduplicate nodes by id (preserve first occurrence)
-  const seenNodes = new Set<string>()
-  const nodes = [] as LangGraph["nodes"]
-  for (const n of graph.nodes || []) {
-    if (!seenNodes.has(n.id)) {
-      seenNodes.add(n.id)
-      nodes.push(n)
-    }
-  }
-
-  // Deduplicate edges by key: source|target|label
-  const seenEdges = new Set<string>()
-  const edges = [] as LangGraph["edges"]
-  for (const e of graph.edges || []) {
-    const key = `${e.source}|${e.target}|${e.label ?? ''}`
-    if (!seenEdges.has(key)) {
-      seenEdges.add(key)
-      edges.push(e)
-    }
-  }
-
-  return { nodes, edges }
-}
+// normalizeGraph moved to shared utilities
 
 /**
  * Code generation strategies using Strategy Pattern
@@ -113,6 +28,19 @@ interface CodeGenerator {
 class ImportsGenerator implements CodeGenerator {
   generate(): string {
     return PYTHON_IMPORTS
+  }
+}
+
+class EntryPointGenerator implements CodeGenerator {
+  generate(graph: LangGraph): string {
+    const entryNode = graph.entryPoint
+    if (!entryNode || entryNode === '__end__' || entryNode === '__start__') {
+      return ''
+    }
+
+    return `
+# Set entry point
+workflow.set_entry_point("${entryNode}")`
   }
 }
 
@@ -138,7 +66,7 @@ def ${sanitizedId}(state: State):
   }
 
   private sanitizeFunctionName(id: string): string {
-    return CodeGenerationUtils.sanitizeFunctionName(id)
+    return sanitizeFunctionName(id)
   }
 }
 
@@ -162,7 +90,7 @@ workflow = StateGraph(State)
   }
 
   private sanitizeFunctionName(id: string): string {
-    return id.replace(/[^a-zA-Z0-9_]/g, '_').replace(/^[0-9]/, '_$&')
+    return sanitizeFunctionName(id)
   }
 }
 
@@ -170,9 +98,18 @@ class EdgesGenerator implements CodeGenerator {
   generate(graph: LangGraph): string {
     const header = `
 # Add edges`
-    
+    // Direct unlabeled edges
     const directEdges = this.generateDirectEdges(graph)
-    const conditionalEdges = this.generateConditionalEdges(graph)
+
+    // Group labeled edges by source without any legacy folding
+    const bySource = new Map<string, { label: string; target: string }[]>()
+    for (const e of graph.edges) {
+      if (e.label && e.label !== '') {
+        if (!bySource.has(e.source)) bySource.set(e.source, [])
+        bySource.get(e.source)!.push({ label: String(e.label), target: e.target })
+      }
+    }
+    const conditionalEdges = this.generateConditionalEdgesFromMappings(bySource)
 
     return [header, directEdges, conditionalEdges].filter(Boolean).join('\n')
   }
@@ -184,16 +121,7 @@ class EdgesGenerator implements CodeGenerator {
       .join('\n')
   }
 
-  private generateConditionalEdges(graph: LangGraph): string {
-    // Group labeled edges by source to build a mapping per source
-    const bySource = new Map<string, { label: string; target: string }[]>()
-    for (const e of graph.edges) {
-      if (e.label && e.label !== '') {
-        if (!bySource.has(e.source)) bySource.set(e.source, [])
-        bySource.get(e.source)!.push({ label: String(e.label), target: e.target })
-      }
-    }
-
+  private generateConditionalEdgesFromMappings(bySource: Map<string, { label: string; target: string }[]>): string {
     if (bySource.size === 0) return ''
 
     const parts: string[] = []
@@ -227,6 +155,8 @@ def ${funcName}(state: State):
     return parts.join('\n')
   }
 
+  // (Legacy conditional folding removed) – labeled edges are grouped by their real sources as-is
+
   private formatDirectEdge(edge: GraphEdge): string {
     const source = edge.source === '__start__' ? 'START' : `"${edge.source}"`
     const target = edge.target === '__end__' ? 'END' : `"${edge.target}"`
@@ -254,6 +184,7 @@ class PythonCodeGenerator {
       new ImportsGenerator(),
       new NodeFunctionsGenerator(),
       new WorkflowGenerator(),
+      new EntryPointGenerator(),
       new EdgesGenerator(),
       new CompilationGenerator()
     ]
@@ -299,11 +230,6 @@ export function generateCode(graph: LangGraph, language: SupportedLanguage): str
     default:
       throw new Error(`Unsupported language: ${language}`)
   }
-}
-
-// Utility function to get available languages
-export function getSupportedLanguages(): SupportedLanguage[] {
-  return ['python', 'typescript']
 }
 
 // Utility function to get language display names
