@@ -50,6 +50,7 @@ export const GRAPH_CONFIG = {
 export const GRAPH_STYLES = {
   COLORS: {
     SELECTED_EDGE: '#3b82f6',
+    SELF_LOOP_EDGE: '#a855f7',
     LOOP_FEEDBACK_EDGE: '#ef4444',
     DARK_THEME: {
       BACKGROUND: '#0a0a0a',

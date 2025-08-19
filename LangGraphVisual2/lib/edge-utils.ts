@@ -8,6 +8,7 @@ const EDGE_COLORS = {
     dark: GRAPH_STYLES.COLORS.DARK_THEME.EDGE_STROKE,
   },
   loopFeedback: GRAPH_STYLES.COLORS.LOOP_FEEDBACK_EDGE,
+  selfLoop: GRAPH_STYLES.COLORS.SELF_LOOP_EDGE,
 } as const
 
 // 노드의 연결점 정의 (상하좌우 중심점)
@@ -268,6 +269,7 @@ export function createStyledEdge(
   curvature: number = 0
 ): Edge {
   const isLoopFeedback = edge.isLoopFeedback || false
+  const isSelfLoop = edge.source === edge.target
   const baseStroke = isDark ? EDGE_COLORS.base.dark : EDGE_COLORS.base.light
   const loopFeedbackStroke = EDGE_COLORS.loopFeedback
   const isConditional = !!(edge.label && edge.label.trim() !== '')
@@ -279,10 +281,16 @@ export function createStyledEdge(
   let targetHandle: string | undefined
 
   if (sourceNode && targetNode) {
-    // 노드가 있으면 언제나 현재 위치 기반 최적 핸들을 사용 (드래그 시 갱신되도록)
-    const connectionPoints = getOptimalConnectionPoints(sourceNode, targetNode)
-    sourceHandle = connectionPoints.sourceHandle
-    targetHandle = connectionPoints.targetHandle
+    if (isSelfLoop) {
+      // self-loop는 오른쪽에서 나가서 위(top)로 들어오도록 고정 핸들 사용
+      sourceHandle = 'right-source'
+      targetHandle = 'top'
+    } else {
+      // 노드가 있으면 언제나 현재 위치 기반 최적 핸들을 사용 (드래그 시 갱신되도록)
+      const connectionPoints = getOptimalConnectionPoints(sourceNode, targetNode)
+      sourceHandle = connectionPoints.sourceHandle
+      targetHandle = connectionPoints.targetHandle
+    }
   } else if (edge.sourceHandle && edge.targetHandle) {
     // 노드를 찾을 수 없을 때만 저장된 핸들 사용
     sourceHandle = edge.sourceHandle
@@ -292,7 +300,7 @@ export function createStyledEdge(
   // 곡률에 따라 엣지 타입 결정 - 커스텀 곡선 엣지 사용
   let edgeType = "curved" // 모든 엣지에 커스텀 곡선 타입 사용
   
-  if (isLoopFeedback) {
+  if (isLoopFeedback || isSelfLoop) {
     edgeType = "curved"
   }
 
@@ -306,21 +314,21 @@ export function createStyledEdge(
     label: edge.label,
     type: edgeType,
     style: {
-      stroke: isLoopFeedback ? loopFeedbackStroke : baseStroke,
-      strokeWidth: isLoopFeedback ? 3 : 2,
+      stroke: isSelfLoop ? EDGE_COLORS.selfLoop : (isLoopFeedback ? loopFeedbackStroke : baseStroke),
+      strokeWidth: isSelfLoop ? 3 : (isLoopFeedback ? 3 : 2),
       // Use dashed style for conditional edges; keep solid for normal
-      strokeDasharray: isLoopFeedback ? "8 4" : (isConditional ? "6 3" : undefined),
+      strokeDasharray: isSelfLoop ? "4 2" : (isLoopFeedback ? "8 4" : (isConditional ? "6 3" : undefined)),
       strokeLinecap: 'round' as const,
       strokeLinejoin: 'round' as const,
     },
     labelStyle: {
-      fill: isLoopFeedback ? loopFeedbackStroke : (isDark ? "#f9fafb" : "#111827"),
-      fontWeight: isLoopFeedback ? 600 : 500,
+      fill: isSelfLoop ? EDGE_COLORS.selfLoop : (isLoopFeedback ? loopFeedbackStroke : (isDark ? "#f9fafb" : "#111827")),
+      fontWeight: (isSelfLoop || isLoopFeedback) ? 600 : 500,
       fontSize: "11px",
       backgroundColor: isDark ? "#1f2937" : "#ffffff",
       padding: '2px 6px',
       borderRadius: '4px',
-      border: `1px solid ${isDark ? "#374151" : "#e5e7eb"}`,
+      border: `1px solid ${isSelfLoop ? EDGE_COLORS.selfLoop : (isDark ? "#374151" : "#e5e7eb")}`,
     },
     labelBgStyle: {
       fill: isDark ? "#1f2937" : "#ffffff",
@@ -328,11 +336,14 @@ export function createStyledEdge(
       stroke: isDark ? "#374151" : "#e5e7eb",
       strokeWidth: 1,
     },
-    markerEnd: isLoopFeedback ? 'url(#arrow-marker-loop)' : (isDark ? 'url(#arrow-marker-dark)' : 'url(#arrow-marker)'),
+    markerEnd: isSelfLoop
+      ? 'url(#arrow-marker-selfloop)'
+      : (isLoopFeedback ? 'url(#arrow-marker-loop)' : (isDark ? 'url(#arrow-marker-dark)' : 'url(#arrow-marker)')),
     // 곡률 정보를 data에 저장하여 커스텀 렌더링에 사용
     data: {
       curvature,
-      originalEdge: edge
+      originalEdge: edge,
+      selfLoop: isSelfLoop,
     }
   }
 }

@@ -10,6 +10,7 @@ import { GRAPH_STYLES } from '@/lib/constants'
 interface CurvedEdgeData {
   curvature?: number
   originalEdge?: any
+  selfLoop?: boolean
 }
 
 export function CurvedEdge({
@@ -30,6 +31,7 @@ export function CurvedEdge({
   const dragState = useDragState()
   const { selectEdge, startEdgeDrag, updateDragPosition, endEdgeDrag } = useEditingActions()
   const curvature = data?.curvature || 0
+  const isSelfLoop = data?.selfLoop === true || (sourceX === targetX && sourceY === targetY)
   
   // Check if this edge is selected
   const isSelected = selectedEdgeId === id || selected
@@ -37,16 +39,42 @@ export function CurvedEdge({
   // 곡률에 따라 베지어 곡선의 제어점을 조정
   // 곡률이 높을수록 더 큰 곡선을 만들어 충돌을 회피
   const adjustedCurvature = curvature === 0 ? 0.1 : curvature * 0.8 + 0.2
-  
-  const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-    curvature: adjustedCurvature,
-  })
+
+  let edgePath: string
+  let labelX: number
+  let labelY: number
+
+  if (isSelfLoop) {
+    // Self-loop: exit from right handle (source) and enter via top handle (target)
+    // Use a single cubic curve that arcs around the top-right quadrant
+    const sx = sourceX
+    const sy = sourceY
+    const tx = targetX
+    const ty = targetY
+    const dx = 48 // outward x offset
+    const dy = 64 // upward y offset
+    const c1x = sx + dx
+    const c1y = sy - dy
+    const c2x = tx + dx
+    const c2y = ty - dy * 0.4
+    edgePath = `M ${sx} ${sy} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${tx} ${ty}`
+    // Place label roughly near the apex of the arc
+    labelX = (sx + tx) / 2 + dx * 0.3
+    labelY = Math.min(sy, ty) - dy * 0.6
+  } else {
+    const result = getBezierPath({
+      sourceX,
+      sourceY,
+      sourcePosition,
+      targetX,
+      targetY,
+      targetPosition,
+      curvature: adjustedCurvature,
+    })
+    edgePath = result[0]
+    labelX = result[1]
+    labelY = result[2]
+  }
 
   // Handle edge click for selection
   const handleEdgeClick = useCallback((event: React.MouseEvent) => {
@@ -108,13 +136,10 @@ export function CurvedEdge({
 
   // Update markerEnd based on selection - override only if selected
   const currentMarkerEnd = useMemo(() => {
-    if (isSelected) {
-      return 'url(#arrow-marker-selected)'
-    }
-    // Always show a default arrow when not selected
-    // Ignore hover/focus-driven markerEnd changes from props
-    return 'url(#arrow-marker)'
-  }, [isSelected])
+    if (isSelected) return 'url(#arrow-marker-selected)'
+    // Respect provided markerEnd (e.g., self-loop or loop feedback)
+    return markerEnd || 'url(#arrow-marker)'
+  }, [isSelected, markerEnd])
 
   return (
     <>
