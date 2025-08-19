@@ -81,3 +81,78 @@ export async function aiGenerate(req: AiGenerateRequest): Promise<AiGenerateResp
     model: data.model || '',
   }
 }
+
+// Templates API
+export type TemplateItem = {
+  _id: string
+  title: string
+  description?: string
+  code: string
+  language: 'python' | 'typescript' | 'javascript'
+  author: string
+  createdAt: string
+  updatedAt: string
+  likedBy?: string[]
+  likedByCount?: number
+}
+
+export type TemplateListResponse = {
+  items: TemplateItem[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
+export async function listTemplates(params: {
+  q?: string
+  sort?: 'latest' | 'likes'
+  page?: number
+  limit?: number
+  authorId?: string
+} = {}): Promise<TemplateListResponse> {
+  const query = new URLSearchParams()
+  if (params.q) query.set('q', params.q)
+  if (params.sort) query.set('sort', params.sort)
+  if (params.page) query.set('page', String(params.page))
+  if (params.limit) query.set('limit', String(params.limit))
+  if (params.authorId) query.set('authorId', params.authorId)
+  const res = await fetch(`${API_BASE_URL}/templates?${query.toString()}`, {
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error(`Failed to load templates: ${res.status}`)
+  return (await res.json()) as TemplateListResponse
+}
+
+export async function createTemplate(body: {
+  title: string
+  description?: string
+  code: string
+  language: 'python' | 'typescript' | 'javascript'
+}): Promise<TemplateItem> {
+  const res = await fetch(`${API_BASE_URL}/templates`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`Failed to create template: ${res.status}`)
+  return (await res.json()) as TemplateItem
+}
+
+export async function toggleTemplateLike(id: string): Promise<{ liked: boolean; likes: number }> {
+  const res = await fetch(`${API_BASE_URL}/templates/${id}/like`, {
+    method: 'POST',
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error(`Failed to toggle like: ${res.status}`)
+  return (await res.json()) as { liked: boolean; likes: number }
+}
+
+export async function getTemplate(id: string): Promise<TemplateItem> {
+  const res = await fetch(`${API_BASE_URL}/templates/${id}`, {
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error(`Failed to fetch template: ${res.status}`)
+  return (await res.json()) as TemplateItem
+}

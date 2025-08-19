@@ -110,6 +110,7 @@ export const TRANSLATIONS = {
     // Header
     "app.title": "LangGraph GUI",
     "app.description": "A minimal GUI to visualize LangGraph graphs.",
+    "menu.templates": "Code Templates",
 
     // Buttons
     "button.run": "Run",
@@ -117,6 +118,8 @@ export const TRANSLATIONS = {
     "button.import": "Import",
     "button.export": "Export",
     "button.settings": "Settings",
+    "button.like": "Like",
+    "button.unlike": "Unlike",
 
     // Editor
     "editor.title": "Code Editor",
@@ -141,6 +144,14 @@ export const TRANSLATIONS = {
     // Settings
     "settings.language": "Language",
 
+    // Templates Page
+    "templates.title": "Code Templates",
+    "templates.search.placeholder": "Search templates...",
+    "templates.sort.latest": "Latest",
+    "templates.sort.likes": "Most Liked",
+    "templates.tab.all": "All",
+    "templates.tab.mine": "Mine",
+
     // Node Creation Dialog
     "dialog.node.title": "Add New Node",
     "dialog.node.description": "Enter a name for the new node to add to your graph.",
@@ -164,6 +175,7 @@ export const TRANSLATIONS = {
     // Header
     "app.title": "LangGraph GUI",
     "app.description": "LangGraph 그래프를 시각화하는 최소한의 플레이그라운드입니다.",
+    "menu.templates": "코드 템플릿",
 
     // Buttons
     "button.run": "실행",
@@ -171,6 +183,8 @@ export const TRANSLATIONS = {
     "button.import": "가져오기",
     "button.export": "내보내기",
     "button.settings": "설정",
+    "button.like": "좋아요",
+    "button.unlike": "취소",
 
     // Editor
     "editor.title": "코드 에디터",
@@ -194,6 +208,14 @@ export const TRANSLATIONS = {
 
     // Settings
     "settings.language": "언어",
+
+    // Templates Page
+    "templates.title": "코드 템플릿",
+    "templates.search.placeholder": "템플릿 검색...",
+    "templates.sort.latest": "최신순",
+    "templates.sort.likes": "좋아요순",
+    "templates.tab.all": "전체",
+    "templates.tab.mine": "내 템플릿",
 
     // Node Creation Dialog
     "dialog.node.title": "새 노드 추가",

@@ -23,10 +23,11 @@
 */.vercel
 
 # typescript
-*/.tsbuildinfo
-*/next-env.d.ts
+**/*.tsbuildinfo
+**/next-env.d.ts
 
 # testing
 */coverage
 */test-results
 LangGraphVisual2/tsconfig.tsbuildinfo
+nest-api/tsconfig.tsbuildinfo

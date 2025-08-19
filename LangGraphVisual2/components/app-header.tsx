@@ -3,6 +3,7 @@
 import { Moon, Sun, Globe } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useEffect } from "react"
+import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
 
@@ -53,6 +54,13 @@ export function AppHeader({ onImport }: AppHeaderProps) {
         <div className="flex items-center space-x-3">
           {/* Import/Export Buttons */}
           <ImportExportButtons onImport={onImport} />
+
+          {/* Code Templates Link */}
+          <Link href="/templates" className="hidden sm:block">
+            <Button variant="outline" size="sm">
+              {t("menu.templates")}
+            </Button>
+          </Link>
 
           {/* Language Selector */}
           <DropdownMenu>
