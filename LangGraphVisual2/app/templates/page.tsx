@@ -275,15 +275,14 @@ export default function TemplatesPage() {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="border rounded overflow-hidden">
+            <div className="h-[360px] border rounded overflow-hidden">
               <GraphPreview
                 code={previewCode}
                 language={(previewItem?.language === 'javascript' ? 'typescript' : (previewItem?.language || 'python')) as any}
-                height={360}
+                height="100%"
               />
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Code</label>
               <div className="rounded border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <MonacoEditor
                   height="360px"

@@ -59,9 +59,6 @@ export function TemplateCard({
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate" title={item.title}>
             {item.title}
           </h3>
-          {item.description && (
-            <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">{item.description}</p>
-          )}
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="secondary" className="shrink-0 capitalize">

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Play, Minimize2, Sparkles } from 'lucide-react'
+import { Play, Sparkles } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { aiGenerate } from '@/lib/api'
@@ -386,15 +386,15 @@ declare global {
             </div>
           </div>
           
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={onMinimize}
-            className="h-7 w-7 p-0"
+            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
             title="Minimize editor"
           >
-            <Minimize2 className="w-3 h-3" />
-          </Button>
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+            </svg>
+          </button>
         </div>
         
         {/* 두 번째 줄 - 액션 버튼들 */}

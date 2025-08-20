@@ -124,15 +124,16 @@ export function GraphPreview({ code, language, height = 160, className, compact 
     }
   }, [code, language])
 
+  const heightStyle = typeof height === 'string' ? height : `${height}px`
+  
   return (
-    <div className={className}>
+    <div className={className} style={{ height: heightStyle }}>
       <ReactFlowProvider>
         {graph && !loading ? (
-          <TinyFlow graph={graph} height={height} compact={!!compact} />
+          <TinyFlow graph={graph} height="100%" compact={!!compact} />
         ) : (
           <div
-            className="w-full border rounded bg-slate-50 dark:bg-slate-900/60 text-xs text-slate-600 dark:text-slate-300 p-2"
-            style={{ height }}
+            className="w-full h-full flex items-center justify-center border rounded bg-slate-50 dark:bg-slate-900/60 text-xs text-slate-600 dark:text-slate-300 p-2"
           >
             {loading ? "Parsing graph..." : error ? `Preview unavailable: ${error}` : "No preview"}
           </div>
