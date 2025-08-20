@@ -8,18 +8,25 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { TemplateCard } from "@/components/template-card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { TemplateForm, type TemplateFormValues } from "@/components/template-form"
 import { AppHeader } from "@/components/app-header"
-import { Textarea } from "@/components/ui/textarea"
 import { GraphPreview } from "@/components/graph-preview"
 import { useRouter } from "next/navigation"
+import dynamic from "next/dynamic"
+import { useTheme } from "next-themes"
+
+const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
+  ssr: false,
+})
 
 export default function TemplatesPage() {
   const { t } = useI18n()
   const { user } = useAuth()
   const router = useRouter()
+  const { resolvedTheme } = useTheme()
 
   const [q, setQ] = useState("")
   const [sort, setSort] = useState<'latest' | 'likes'>("latest")
@@ -243,10 +250,32 @@ export default function TemplatesPage() {
 
       {/* Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="sm:max-w-[900px]">
+        <DialogContent className="sm:max-w-[1280px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{previewItem?.title || 'Template Preview'}</DialogTitle>
           </DialogHeader>
+          {/* Metadata */}
+          <div className="space-y-2 mb-2">
+            {previewItem?.description && (
+              <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-line">{previewItem.description}</p>
+            )}
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <Badge variant="secondary" className="capitalize">
+                {previewItem?.language === 'javascript' ? 'typescript' : (previewItem?.language || 'python')}
+              </Badge>
+              {(
+                <Badge variant="outline" className="capitalize">
+                  {(previewItem?.visibility || 'public')}
+                </Badge>
+              )}
+              {previewItem?.createdAt && (
+                <span className="text-slate-500">Created: {new Date(previewItem.createdAt).toLocaleString()}</span>
+              )}
+              {previewItem?.updatedAt && (
+                <span className="text-slate-500">Updated: {new Date(previewItem.updatedAt).toLocaleString()}</span>
+              )}
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="border rounded overflow-hidden">
               <GraphPreview
@@ -257,11 +286,25 @@ export default function TemplatesPage() {
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Code</label>
-              <Textarea
-                value={previewCode}
-                onChange={(e) => setPreviewCode(e.target.value)}
-                className="min-h-[360px] font-mono text-xs"
-              />
+              <div className="rounded border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <MonacoEditor
+                  height="360px"
+                  width="100%"
+                  language={(previewItem?.language === 'javascript' ? 'typescript' : (previewItem?.language || 'python'))}
+                  theme={resolvedTheme === 'dark' ? 'vs-dark' : 'vs'}
+                  value={previewCode}
+                  onChange={(v) => setPreviewCode(v || '')}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 12,
+                    wordWrap: 'on',
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                    tabSize: (previewItem?.language === 'javascript' ? 2 : ((previewItem?.language || 'python') === 'python' ? 4 : 2)),
+                    insertSpaces: true,
+                  }}
+                />
+              </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setPreviewOpen(false)}>닫기</Button>
                 <Button onClick={applyToHome}>홈에 적용하기</Button>

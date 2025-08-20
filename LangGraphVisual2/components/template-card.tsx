@@ -92,7 +92,7 @@ export function TemplateCard({
         role="button"
         aria-label="Preview graph"
       >
-        <GraphPreview code={item.code} language={item.language as any} height={160} />
+        <GraphPreview code={item.code} language={item.language as any} height={160} compact />
       </div>
 
       <div className="flex items-center justify-between mt-auto">

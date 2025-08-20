@@ -4,6 +4,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react"
 import ReactFlow, { Background, BackgroundVariant, ReactFlowProvider, type Edge, type Node } from "reactflow"
 import "reactflow/dist/style.css"
 import type { LangGraph } from "@/lib/types"
+import { useTheme } from "next-themes"
+import { GRAPH_STYLES } from "@/lib/constants"
 
 export type GraphPreviewProps = {
   code: string
@@ -14,6 +16,8 @@ export type GraphPreviewProps = {
 }
 
 function TinyFlow({ graph, height = 160, compact = false }: { graph: LangGraph | null; height?: number | string; compact?: boolean }) {
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === "dark"
 
   const { nodes, edges } = useMemo(() => {
     if (!graph) return { nodes: [] as Node[], edges: [] as Edge[] }
@@ -61,9 +65,19 @@ function TinyFlow({ graph, height = 160, compact = false }: { graph: LangGraph |
         zoomOnPinch={false}
         panOnDrag={false}
         proOptions={{ hideAttribution: true }}
-        className="bg-white dark:bg-slate-900"
+        className={isDark ? "dark" : ""}
+        style={{
+          backgroundColor: isDark
+            ? GRAPH_STYLES.COLORS.DARK_THEME.BACKGROUND
+            : GRAPH_STYLES.COLORS.LIGHT_THEME.BACKGROUND,
+        }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={12}
+          size={1}
+          color={isDark ? GRAPH_STYLES.COLORS.DARK_THEME.MINIMAP_BORDER : GRAPH_STYLES.COLORS.LIGHT_THEME.MINIMAP_BORDER}
+        />
       </ReactFlow>
     </div>
   )

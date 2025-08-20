@@ -6,12 +6,10 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Play, Minimize2, Settings, Code2, Sparkles } from 'lucide-react'
+import { Play, Minimize2, Sparkles } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { aiGenerate } from '@/lib/api'
-import { pythonSnippets } from '@/utils/python-snippets'
-import { typescriptSnippets } from '@/utils/typescript-snippets'
 import { useLanguage, useEditorActions } from '@/stores/editor-store'
 
 // Monaco Editor를 동적으로 로드하여 SSR 문제 방지
@@ -51,7 +49,6 @@ export function CodeEditor({
   const language = useLanguage()
   const { setLanguage } = useEditorActions()
   const [mounted, setMounted] = useState(false)
-  const [showExamples, setShowExamples] = useState(false)
   const [aiOpen, setAiOpen] = useState(false)
   const [aiInstruction, setAiInstruction] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
@@ -59,7 +56,6 @@ export function CodeEditor({
   const [aiCode, setAiCode] = useState<string>('')
   const [aiError, setAiError] = useState<string | null>(null)
   const editorRef = useRef<any>(null)
-  const examplesRef = useRef<HTMLDivElement>(null)
   const lastDetectedLanguage = useRef<string>('')
 
   // 컴포넌트 마운트 상태 관리
@@ -220,47 +216,7 @@ declare global {
     }
   }, [])
 
-  // Close examples dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (examplesRef.current && !examplesRef.current.contains(event.target as Node)) {
-        setShowExamples(false)
-      }
-    }
-
-    if (showExamples) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [showExamples])
-
-  // Load example code
-  const handleLoadExample = useCallback((exampleKey: string) => {
-    let exampleCode = ''
-    
-    if (language === 'python') {
-      if (exampleKey === 'basic') {
-        exampleCode = pythonSnippets.langgraph_basic
-      } else if (exampleKey === 'conditional') {
-        exampleCode = pythonSnippets.conditional_edge
-      } else if (exampleKey === 'state') {
-        exampleCode = pythonSnippets.state_definition
-      }
-    } else {
-      // TypeScript examples
-      if (exampleKey in typescriptSnippets) {
-        exampleCode = typescriptSnippets[exampleKey as keyof typeof typescriptSnippets]
-      }
-    }
-    
-    if (exampleCode) {
-      onChange(exampleCode)
-      setShowExamples(false)
-    }
-  }, [language, onChange])
+  // Load example code (removed)
 
   // 언어 자동 감지 비활성화 - 무한 루프 방지
   // useEffect(() => {
@@ -455,15 +411,6 @@ declare global {
               AI Generate
             </Button>
             <Button
-              variant="ghost" 
-              size="sm"
-              onClick={() => setShowExamples(!showExamples)}
-              className="h-7 w-7 p-0"
-              title="Load example code"
-            >
-              <Code2 className="w-3 h-3" />
-            </Button>
-            <Button
               variant="outline"
               size="sm"
               onClick={handleSaveAsTemplate}
@@ -484,67 +431,6 @@ declare global {
             <Play className="w-3 h-3 mr-1" />
             {runButtonText}
           </Button>
-
-          {/* Examples Dropdown */}
-          {showExamples && (
-            <div
-              ref={examplesRef}
-              className="absolute top-8 right-0 w-64 p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg z-50"
-            >
-              <h3 className="text-sm font-semibold mb-3">Code Examples</h3>
-              
-              {language === 'python' ? (
-                <div className="space-y-1">
-                  <button
-                    onClick={() => handleLoadExample('basic')}
-                    className="w-full text-left px-2 py-1 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                  >
-                    Basic LangGraph Workflow
-                  </button>
-                  <button
-                    onClick={() => handleLoadExample('conditional')}
-                    className="w-full text-left px-2 py-1 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                  >
-                    Conditional Edges
-                  </button>
-                  <button
-                    onClick={() => handleLoadExample('state')}
-                    className="w-full text-left px-2 py-1 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                  >
-                    State Definition
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <button
-                    onClick={() => handleLoadExample('basic')}
-                    className="w-full text-left px-2 py-1 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                  >
-                    Basic Workflow
-                  </button>
-                  <button
-                    onClick={() => handleLoadExample('conditional')}
-                    className="w-full text-left px-2 py-1 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                  >
-                    Conditional Routing
-                  </button>
-                  {/* JavaScript example removed */}
-                  <button
-                    onClick={() => handleLoadExample('complexWorkflow')}
-                    className="w-full text-left px-2 py-1 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                  >
-                    Complex Workflow
-                  </button>
-                  <button
-                    onClick={() => handleLoadExample('withLoops')}
-                    className="w-full text-left px-2 py-1 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                  >
-                    With Feedback Loops
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
