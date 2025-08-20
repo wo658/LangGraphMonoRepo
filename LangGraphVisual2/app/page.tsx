@@ -186,16 +186,13 @@ export default function IndexPage() {
   }, [selectedNodeId, removeNode, selectNode, addToast])
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="h-full relative overflow-hidden">
+      <div className="absolute inset-0 bg-white dark:bg-slate-800">
+        <LangGraphVisualizer />
+      </div>
 
-      {/* ReactFlow Background - Full Screen with padding */}
-      <div className="flex-1 relative p-4">
-        <div className="h-full w-full bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-          <LangGraphVisualizer />
-        </div>
-
-        {/* Floating Code Editor Panel - Left Side */}
-        <FloatingCodePanel
+      {/* Floating Code Editor Panel - Left Side */}
+      <FloatingCodePanel
           isMinimized={isCodePanelMinimized}
           onToggleMinimized={handleToggleCodePanel}
           code={code}
@@ -205,8 +202,8 @@ export default function IndexPage() {
           runButtonText={isRunning ? t("button.running") : t("button.run")}
         />
 
-        {/* Floating Tools Panel - Right Side */}
-        <div className={`absolute top-8 right-8 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-10 transition-all duration-300 ${isControlPanelMinimized
+      {/* Floating Tools Panel - Right Side */}
+      <div className={`absolute top-8 right-8 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-10 transition-all duration-300 ${isControlPanelMinimized
           ? 'w-12 h-12'
           : 'w-auto min-w-64'
           }`}>
@@ -289,7 +286,6 @@ export default function IndexPage() {
               </div>
             </div>
           )}
-        </div>
       </div>
     </div>
   )

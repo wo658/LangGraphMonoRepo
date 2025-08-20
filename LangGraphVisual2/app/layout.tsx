@@ -30,9 +30,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange={false}
         >
-          <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900">
+          <div className="h-screen flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden">
             <AppHeader />
-            <main className="flex-1">
+            <main className="flex-1 overflow-hidden">
               {children}
             </main>
             <ToastContainer />
