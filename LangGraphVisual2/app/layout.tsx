@@ -4,6 +4,7 @@ import "./globals.css"
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ToastContainer } from "@/components/toast-container"
+import { AppHeader } from "@/components/app-header"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -29,8 +30,13 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange={false}
         >
-          {children}
-          <ToastContainer />
+          <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900">
+            <AppHeader />
+            <main className="flex-1">
+              {children}
+            </main>
+            <ToastContainer />
+          </div>
         </ThemeProvider>
       </body>
     </html>

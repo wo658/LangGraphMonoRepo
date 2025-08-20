@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge"
 import { TemplateCard } from "@/components/template-card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { TemplateForm, type TemplateFormValues } from "@/components/template-form"
-import { AppHeader } from "@/components/app-header"
 import { GraphPreview } from "@/components/graph-preview"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
@@ -161,7 +160,6 @@ export default function TemplatesPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900">
-      <AppHeader />
       <div className="px-6 py-6">
 
         <div className="flex flex-wrap items-center gap-3 mb-4">

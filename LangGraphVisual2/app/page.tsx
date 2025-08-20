@@ -3,7 +3,6 @@
 import { useCallback, useEffect } from "react"
 import type { LangGraph } from "@/lib/types"
 import { LangGraphVisualizer } from "@/components/langgraph-visualizer"
-import { AppHeader } from "@/components/app-header"
 import { FloatingCodePanel } from "@/components/floating-code-panel"
 import { EdgeEditingToolbar } from "@/components/edge-editing-toolbar"
 import { Code } from 'lucide-react'
@@ -15,6 +14,7 @@ import { useSelectedEdgeId, useSelectedNodeId, useIsCodePanelMinimized, useIsCon
 import { useAddToast } from '@/stores/notification-store'
 import { useI18n } from '@/stores/i18n-store'
 import { EXECUTION_CONFIG } from "@/lib/constants"
+import { AppHeader } from "@/components/app-header"
  
 
 export default function IndexPage() {
@@ -187,7 +187,6 @@ export default function IndexPage() {
 
   return (
     <div className="flex flex-col h-screen bg-slate-50 dark:bg-slate-900">
-      <AppHeader />
 
       {/* ReactFlow Background - Full Screen with padding */}
       <div className="flex-1 relative p-4">
