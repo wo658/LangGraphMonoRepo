@@ -11,10 +11,14 @@ export function TemplateCard({
   item,
   currentUserId,
   onLikeChange,
+  onEdit,
+  onDelete,
 }: {
   item: TemplateItem
   currentUserId?: string | null
   onLikeChange?: (id: string, liked: boolean, likes: number) => void
+  onEdit?: (item: TemplateItem) => void
+  onDelete?: (id: string) => void
 }) {
   const initiallyLiked = useMemo(
     () => !!(currentUserId && item.likedBy?.some((u) => u === currentUserId)),
@@ -56,9 +60,27 @@ export function TemplateCard({
             <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">{item.description}</p>
           )}
         </div>
-        <Badge variant="secondary" className="shrink-0 capitalize">
-          {item.language}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="shrink-0 capitalize">
+            {item.language}
+          </Badge>
+          {currentUserId && currentUserId === item.author && (
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="outline" onClick={() => onEdit?.(item)}>
+                Edit
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (confirm('Delete this template?')) onDelete?.(item._id)
+                }}
+              >
+                Delete
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       <pre className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded p-2 text-xs overflow-auto max-h-40">

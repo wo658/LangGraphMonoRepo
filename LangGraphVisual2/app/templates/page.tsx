@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useState } from "react"
 import { useI18n } from "@/stores/i18n-store"
 import { useAuth } from "@/stores/auth-store"
-import { listTemplates, type TemplateItem } from "@/lib/api"
+import { listTemplates, type TemplateItem, createTemplate, updateTemplate, deleteTemplate, getTemplate } from "@/lib/api"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { TemplateCard } from "@/components/template-card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { TemplateForm, type TemplateFormValues } from "@/components/template-form"
 
 export default function TemplatesPage() {
   const { t } = useI18n()
@@ -23,12 +25,17 @@ export default function TemplatesPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(false)
 
+  // Modal state
+  const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState<TemplateItem | null>(null)
+  const isOwnerTab = tab === 'mine'
+
   const authorId = useMemo(() => (tab === 'mine' ? user?.id : undefined), [tab, user?.id])
 
   const fetchPage = async (nextPage: number, reset = false) => {
     setLoading(true)
     try {
-      const res = await listTemplates({ q, sort, page: nextPage, limit: 12, authorId })
+      const res = await listTemplates({ q, sort, page: nextPage, limit: 12, authorId, scope: isOwnerTab ? 'mine' : undefined })
       setItems((prev) => (reset ? res.items : [...prev, ...res.items]))
       setTotalPages(res.totalPages)
       setPage(res.page)
@@ -54,6 +61,43 @@ export default function TemplatesPage() {
 
   const handleLikeChange = (id: string, liked: boolean, likes: number) => {
     setItems((prev) => prev.map((it) => (it._id === id ? { ...it, likedByCount: likes } : it)))
+  }
+
+  // Create / Edit / Delete handlers
+  const handleNew = () => {
+    setEditing(null)
+    setOpen(true)
+  }
+
+  const handleEdit = async (item: TemplateItem) => {
+    try {
+      // fetch full doc to get visibility/sharedWith if needed
+      const full = await getTemplate(item._id)
+      setEditing({ ...full })
+    } catch {
+      setEditing(item)
+    } finally {
+      setOpen(true)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    await deleteTemplate(id)
+    // remove from list
+    setItems((prev) => prev.filter((x) => x._id !== id))
+  }
+
+  const submitForm = async (values: TemplateFormValues) => {
+    if (editing) {
+      const updated = await updateTemplate(editing._id, values)
+      setItems((prev) => prev.map((x) => (x._id === updated._id ? { ...x, ...updated } : x)))
+    } else {
+      const created = await createTemplate(values)
+      // Prepend new item when on any tab; if on 'mine' but created by me, it will show as well
+      setItems((prev) => [created, ...prev])
+    }
+    setOpen(false)
+    setEditing(null)
   }
 
   return (
@@ -88,6 +132,9 @@ export default function TemplatesPage() {
               <SelectItem value="likes">{t("templates.sort.likes")}</SelectItem>
             </SelectContent>
           </Select>
+          {user && (
+            <Button onClick={handleNew} className="ml-auto">New Template</Button>
+          )}
         </div>
 
         {tab === 'mine' && !user && (
@@ -103,6 +150,8 @@ export default function TemplatesPage() {
               item={item}
               currentUserId={user?.id}
               onLikeChange={handleLikeChange}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
             />)
           )}
         </div>
@@ -118,6 +167,23 @@ export default function TemplatesPage() {
           )}
         </div>
       </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-[640px]">
+          <DialogHeader>
+            <DialogTitle>{editing ? 'Edit Template' : 'New Template'}</DialogTitle>
+          </DialogHeader>
+          <TemplateForm
+            initial={editing || { language: 'python', visibility: 'private' }}
+            submitText={editing ? 'Update' : 'Create'}
+            onSubmit={submitForm}
+            onCancel={() => {
+              setOpen(false)
+              setEditing(null)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

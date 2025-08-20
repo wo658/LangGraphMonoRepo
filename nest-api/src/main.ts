@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -26,6 +27,14 @@ async function bootstrap() {
   SwaggerModule.setup('api-docs', app, document);
   
   const port = process.env.PORT || 4000;
+  // Global validation pipe
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}`);
 }

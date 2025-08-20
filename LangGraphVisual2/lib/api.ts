@@ -94,6 +94,7 @@ export type TemplateItem = {
   updatedAt: string
   likedBy?: string[]
   likedByCount?: number
+  visibility?: 'public' | 'private'
 }
 
 export type TemplateListResponse = {
@@ -110,6 +111,7 @@ export async function listTemplates(params: {
   page?: number
   limit?: number
   authorId?: string
+  scope?: 'public' | 'mine'
 } = {}): Promise<TemplateListResponse> {
   const query = new URLSearchParams()
   if (params.q) query.set('q', params.q)
@@ -117,6 +119,7 @@ export async function listTemplates(params: {
   if (params.page) query.set('page', String(params.page))
   if (params.limit) query.set('limit', String(params.limit))
   if (params.authorId) query.set('authorId', params.authorId)
+  if (params.scope) query.set('scope', params.scope)
   const res = await fetch(`${API_BASE_URL}/templates?${query.toString()}`, {
     credentials: 'include',
   })
@@ -129,6 +132,7 @@ export async function createTemplate(body: {
   description?: string
   code: string
   language: 'python' | 'typescript' | 'javascript'
+  visibility?: 'public' | 'private'
 }): Promise<TemplateItem> {
   const res = await fetch(`${API_BASE_URL}/templates`, {
     method: 'POST',
@@ -155,4 +159,51 @@ export async function getTemplate(id: string): Promise<TemplateItem> {
   })
   if (!res.ok) throw new Error(`Failed to fetch template: ${res.status}`)
   return (await res.json()) as TemplateItem
+}
+
+export async function updateTemplate(
+  id: string,
+  body: Partial<{
+    title: string
+    description?: string
+    code: string
+    language: 'python' | 'typescript' | 'javascript'
+    visibility: 'public' | 'private'
+  }>,
+): Promise<TemplateItem> {
+  const res = await fetch(`${API_BASE_URL}/templates/${id}`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`Failed to update template: ${res.status}`)
+  return (await res.json()) as TemplateItem
+}
+
+export async function deleteTemplate(id: string): Promise<{ deleted: true }> {
+  const res = await fetch(`${API_BASE_URL}/templates/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error(`Failed to delete template: ${res.status}`)
+  return (await res.json()) as { deleted: true }
+}
+
+// sharing API removed
+
+export type UserSearchItem = {
+  _id: string
+  name?: string
+  email?: string
+  avatarUrl?: string
+}
+
+export async function searchUsers(q: string, limit = 10): Promise<UserSearchItem[]> {
+  const query = new URLSearchParams({ q, limit: String(limit) })
+  const res = await fetch(`${API_BASE_URL}/users/search?${query.toString()}`, {
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error(`Failed to search users: ${res.status}`)
+  return (await res.json()) as UserSearchItem[]
 }

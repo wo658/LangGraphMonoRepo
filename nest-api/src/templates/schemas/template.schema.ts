@@ -22,6 +22,9 @@ export class Template {
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   likedBy: Types.ObjectId[];
+  @Prop({ required: true, enum: ['public', 'private'], default: 'private' })
+  visibility: 'public' | 'private';
 }
 
 export const TemplateSchema = SchemaFactory.createForClass(Template);
+TemplateSchema.index({ visibility: 1, author: 1, createdAt: -1 });
