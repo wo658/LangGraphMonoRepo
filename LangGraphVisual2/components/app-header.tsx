@@ -15,18 +15,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useLanguage, useLanguageActions } from '@/stores/i18n-store'
 import { useI18n } from '@/stores/i18n-store'
-import { ImportExportButtons } from "@/components/import-export-buttons"
-import type { LangGraph } from "@/lib/types"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth, useAuthActions } from "@/stores/auth-store"
 
-interface AppHeaderProps {
-  onImport: (data: { graph: LangGraph; code: string }) => void
-}
-
-export function AppHeader({ onImport }: AppHeaderProps) {
+export function AppHeader() {
   const { theme, setTheme } = useTheme()
   const { language, setLanguage, t } = useI18n()
   const { user, loading } = useAuth()
@@ -43,25 +36,25 @@ export function AppHeader({ onImport }: AppHeaderProps) {
   }, [])
 
   return (
-    <div className="flex-shrink-0 px-6 py-4">
+    <div className="flex-shrink-0 px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur">
       <div className="flex items-center justify-between">
-        <div className="flex-1 min-w-0 pr-8">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            {t("app.title")}
-          </h1>
+        <div className="flex items-center gap-6 min-w-0 pr-4">
+          <Link href="/" className="hover:opacity-90">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              {t("app.title")}
+            </h1>
+          </Link>
+          <nav className="hidden md:flex items-center gap-2">
+            <Link href="/">
+              <Button variant="ghost" size="sm">Home</Button>
+            </Link>
+            <Link href="/templates">
+              <Button variant="ghost" size="sm">Templates</Button>
+            </Link>
+          </nav>
         </div>
 
         <div className="flex items-center space-x-3">
-          {/* Import/Export Buttons */}
-          <ImportExportButtons onImport={onImport} />
-
-          {/* Code Templates Link */}
-          <Link href="/templates" className="hidden sm:block">
-            <Button variant="outline" size="sm">
-              {t("menu.templates")}
-            </Button>
-          </Link>
-
           {/* Language Selector */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

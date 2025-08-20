@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTheme } from 'next-themes'
+import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -46,6 +47,7 @@ export function CodeEditor({
   className = ""
 }: CodeEditorProps) {
   const { resolvedTheme } = useTheme()
+  const router = useRouter()
   const language = useLanguage()
   const { setLanguage } = useEditorActions()
   const [mounted, setMounted] = useState(false)
@@ -92,6 +94,20 @@ export function CodeEditor({
       setAiLoading(false)
     }
   }, [aiInstruction, language, value, aiCode])
+
+  // Save as Template: skip validation, store draft, and navigate
+  const handleSaveAsTemplate = useCallback(() => {
+    try {
+      const draft = {
+        code: value,
+        language: language,
+      }
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('newTemplateInitial', JSON.stringify(draft))
+      }
+    } catch {}
+    router.push('/templates')
+  }, [language, value, router])
 
   // 언어 변경 핸들러 메모이제이션
   const handleLanguageChange = useCallback((value: 'python' | 'typescript') => {
@@ -446,6 +462,15 @@ declare global {
               title="Load example code"
             >
               <Code2 className="w-3 h-3" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveAsTemplate}
+              className="h-7 px-2 text-xs"
+              title="Save current code as a template"
+            >
+              Save as Template
             </Button>
           </div>
           

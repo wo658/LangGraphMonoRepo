@@ -11,10 +11,15 @@ import { Button } from "@/components/ui/button"
 import { TemplateCard } from "@/components/template-card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { TemplateForm, type TemplateFormValues } from "@/components/template-form"
+import { AppHeader } from "@/components/app-header"
+import { Textarea } from "@/components/ui/textarea"
+import { GraphPreview } from "@/components/graph-preview"
+import { useRouter } from "next/navigation"
 
 export default function TemplatesPage() {
   const { t } = useI18n()
   const { user } = useAuth()
+  const router = useRouter()
 
   const [q, setQ] = useState("")
   const [sort, setSort] = useState<'latest' | 'likes'>("latest")
@@ -29,6 +34,13 @@ export default function TemplatesPage() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<TemplateItem | null>(null)
   const isOwnerTab = tab === 'mine'
+  // Prefill state when navigating from editor
+  const [prefill, setPrefill] = useState<Partial<TemplateFormValues> | null>(null)
+
+  // Preview modal state
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewItem, setPreviewItem] = useState<TemplateItem | null>(null)
+  const [previewCode, setPreviewCode] = useState<string>("")
 
   const authorId = useMemo(() => (tab === 'mine' ? user?.id : undefined), [tab, user?.id])
 
@@ -59,6 +71,26 @@ export default function TemplatesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Auto open New Template modal when arriving from editor
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const raw = sessionStorage.getItem('newTemplateInitial')
+      if (raw) {
+        const data = JSON.parse(raw) as Partial<TemplateFormValues>
+        setPrefill({
+          code: typeof data.code === 'string' ? data.code : '',
+          language: (data.language as any) || 'python',
+        })
+        setEditing(null)
+        setOpen(true)
+      }
+    } catch {}
+    finally {
+      try { sessionStorage.removeItem('newTemplateInitial') } catch {}
+    }
+  }, [])
+
   const handleLikeChange = (id: string, liked: boolean, likes: number) => {
     setItems((prev) => prev.map((it) => (it._id === id ? { ...it, likedByCount: likes } : it)))
   }
@@ -87,6 +119,26 @@ export default function TemplatesPage() {
     setItems((prev) => prev.filter((x) => x._id !== id))
   }
 
+  const openPreview = (item: TemplateItem) => {
+    setPreviewItem(item)
+    setPreviewCode(item.code)
+    setPreviewOpen(true)
+  }
+
+  const applyToHome = () => {
+    if (!previewItem) return
+    try {
+      const lang = previewItem.language === 'javascript' ? 'typescript' : previewItem.language
+      const payload = { code: previewCode, language: lang, autorun: true }
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('importFromTemplate', JSON.stringify(payload))
+      }
+      router.push('/')
+    } catch {
+      // ignore
+    }
+  }
+
   const submitForm = async (values: TemplateFormValues) => {
     if (editing) {
       const updated = await updateTemplate(editing._id, values)
@@ -102,10 +154,8 @@ export default function TemplatesPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900">
+      <AppHeader />
       <div className="px-6 py-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">
-          {t("templates.title")}
-        </h1>
 
         <div className="flex flex-wrap items-center gap-3 mb-4">
           <Tabs value={tab} onValueChange={(v) => setTab(v as 'all' | 'mine')}>
@@ -152,6 +202,7 @@ export default function TemplatesPage() {
               onLikeChange={handleLikeChange}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onPreview={openPreview}
             />)
           )}
         </div>
@@ -174,7 +225,12 @@ export default function TemplatesPage() {
             <DialogTitle>{editing ? 'Edit Template' : 'New Template'}</DialogTitle>
           </DialogHeader>
           <TemplateForm
-            initial={editing || { language: 'python', visibility: 'private' }}
+            initial={{
+              ...(editing || ({} as any)),
+              language: ((editing?.language as any) || (prefill?.language as any) || 'python'),
+              visibility: ((editing as any)?.visibility || 'private'),
+              code: (editing?.code as any) ?? (prefill?.code || ''),
+            }}
             submitText={editing ? 'Update' : 'Create'}
             onSubmit={submitForm}
             onCancel={() => {
@@ -182,6 +238,36 @@ export default function TemplatesPage() {
               setEditing(null)
             }}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Dialog */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="sm:max-w-[900px]">
+          <DialogHeader>
+            <DialogTitle>{previewItem?.title || 'Template Preview'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="border rounded overflow-hidden">
+              <GraphPreview
+                code={previewCode}
+                language={(previewItem?.language === 'javascript' ? 'typescript' : (previewItem?.language || 'python')) as any}
+                height={360}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Code</label>
+              <Textarea
+                value={previewCode}
+                onChange={(e) => setPreviewCode(e.target.value)}
+                className="min-h-[360px] font-mono text-xs"
+              />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setPreviewOpen(false)}>닫기</Button>
+                <Button onClick={applyToHome}>홈에 적용하기</Button>
+              </div>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

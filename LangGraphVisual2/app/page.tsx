@@ -1,12 +1,13 @@
 "use client"
 
-import { useCallback } from "react"
+import { useCallback, useEffect } from "react"
 import type { LangGraph } from "@/lib/types"
 import { LangGraphVisualizer } from "@/components/langgraph-visualizer"
 import { AppHeader } from "@/components/app-header"
 import { FloatingCodePanel } from "@/components/floating-code-panel"
 import { EdgeEditingToolbar } from "@/components/edge-editing-toolbar"
 import { Code } from 'lucide-react'
+import { ImportExportButtons } from "@/components/import-export-buttons"
 
 import { useGraph, useGraphActions } from '@/stores/graph-store'
 import { useCode, useLanguage, useIsRunning, useIsGeneratingCode, useEditorActions } from '@/stores/editor-store'
@@ -27,7 +28,7 @@ export default function IndexPage() {
   const language = useLanguage()
   const isRunning = useIsRunning()
   const isGeneratingCode = useIsGeneratingCode()
-  const { updateCode, setIsRunning, setIsGeneratingCode } = useEditorActions()
+  const { updateCode, setIsRunning, setIsGeneratingCode, setLanguage } = useEditorActions()
   
   const selectedEdgeId = useSelectedEdgeId()
   const selectedNodeId = useSelectedNodeId()
@@ -136,6 +137,31 @@ export default function IndexPage() {
     }
   }, [graph, language, setIsGeneratingCode, updateCode, addToast])
 
+  // Handle import from templates page via sessionStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const raw = sessionStorage.getItem('importFromTemplate')
+      if (!raw) return
+      const data = JSON.parse(raw) as { code?: string; language?: 'python' | 'typescript' | 'javascript'; autorun?: boolean }
+      const codeToSet = typeof data.code === 'string' ? data.code : ''
+      const langRaw = (data.language === 'javascript' ? 'typescript' : data.language) as 'python' | 'typescript' | undefined
+      if (langRaw) setLanguage(langRaw)
+      if (codeToSet) updateCode(codeToSet)
+      // Optionally autorun after state updates
+      if (data.autorun) {
+        setTimeout(() => {
+          void handleRunCode()
+        }, 0)
+      }
+    } catch {
+      // ignore
+    } finally {
+      try { sessionStorage.removeItem('importFromTemplate') } catch {}
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Delete handlers
   const handleDeleteEdge = useCallback(() => {
     if (selectedEdgeId) {
@@ -161,7 +187,7 @@ export default function IndexPage() {
 
   return (
     <div className="flex flex-col h-screen bg-slate-50 dark:bg-slate-900">
-      <AppHeader onImport={handleImport} />
+      <AppHeader />
 
       {/* ReactFlow Background - Full Screen with padding */}
       <div className="flex-1 relative p-4">
@@ -180,7 +206,7 @@ export default function IndexPage() {
           runButtonText={isRunning ? t("button.running") : t("button.run")}
         />
 
-        {/* Floating Graph Controls Panel - Right Side */}
+        {/* Floating Tools Panel - Right Side */}
         <div className={`absolute top-8 right-8 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-10 transition-all duration-300 ${isControlPanelMinimized
           ? 'w-12 h-12'
           : 'w-auto min-w-64'
@@ -199,7 +225,7 @@ export default function IndexPage() {
           ) : (
             <div className="p-4">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Graph Controls</h3>
+                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Tools</h3>
                 <button
                   onClick={() => setControlPanelMinimized(true)}
                   className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
@@ -211,6 +237,10 @@ export default function IndexPage() {
               </div>
 
               <div className="flex flex-col gap-4">
+                {/* Import / Export */}
+                <div>
+                  <ImportExportButtons onImport={handleImport} />
+                </div>
                 {/* Edge Editing Toolbar */}
                 <div className="mb-2">
                   <EdgeEditingToolbar 

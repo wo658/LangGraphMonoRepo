@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { toggleTemplateLike, type TemplateItem } from "@/lib/api"
 import { Heart } from "lucide-react"
+import { GraphPreview } from "@/components/graph-preview"
 
 export function TemplateCard({
   item,
@@ -13,12 +14,14 @@ export function TemplateCard({
   onLikeChange,
   onEdit,
   onDelete,
+  onPreview,
 }: {
   item: TemplateItem
   currentUserId?: string | null
   onLikeChange?: (id: string, liked: boolean, likes: number) => void
   onEdit?: (item: TemplateItem) => void
   onDelete?: (id: string) => void
+  onPreview?: (item: TemplateItem) => void
 }) {
   const initiallyLiked = useMemo(
     () => !!(currentUserId && item.likedBy?.some((u) => u === currentUserId)),
@@ -83,9 +86,14 @@ export function TemplateCard({
         </div>
       </div>
 
-      <pre className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded p-2 text-xs overflow-auto max-h-40">
-        {item.code}
-      </pre>
+      <div
+        className="rounded border border-slate-200 dark:border-slate-700 overflow-hidden cursor-pointer hover:ring-2 hover:ring-slate-300 dark:hover:ring-slate-600 transition"
+        onClick={() => onPreview?.(item)}
+        role="button"
+        aria-label="Preview graph"
+      >
+        <GraphPreview code={item.code} language={item.language as any} height={160} />
+      </div>
 
       <div className="flex items-center justify-between mt-auto">
         <span className="text-xs text-slate-500">{new Date(item.createdAt).toLocaleDateString()}</span>
