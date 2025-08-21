@@ -12,7 +12,7 @@ export type UserProfile = {
 }
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'langgraphmonorepo.railway.internal'
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'langgraphmonorepo-production.up.railway.app'
 
 // Fetch current user profile using HttpOnly cookie (credentials included)
 export async function fetchMe(): Promise<UserProfile | null> {
