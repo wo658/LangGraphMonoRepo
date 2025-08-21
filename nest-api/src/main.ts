@@ -7,10 +7,30 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
+  // Trust proxy for correct protocol detection (Secure cookies behind Railway)
+  const httpAdapter = app.getHttpAdapter();
+  if (httpAdapter.getType() === 'express') {
+    httpAdapter.getInstance().set('trust proxy', 1);
+  }
+
+  const allowedOrigins = (
+    process.env.FRONTEND_URLS || process.env.FRONTEND_URL || 'http://localhost:3000'
+  )
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
   // Enable CORS for frontend
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+    origin: (origin, callback) => {
+      // allow non-browser requests or same-origin
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error(`CORS blocked: ${origin}`), false);
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
   
   // Enable cookie parser
