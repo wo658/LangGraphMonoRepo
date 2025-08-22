@@ -28,19 +28,9 @@ export function AppHeader() {
 
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const formUrl = useMemo(() => {
-    const base = process.env.NEXT_PUBLIC_FEEDBACK_FORM_URL || 'https://docs.google.com/forms/d/e/FORM_ID/viewform'
-    const params = new URLSearchParams()
-    // Required for embedding Google Form inside iframe
-    params.set('embedded', 'true')
-    // Optional: prefill example keys (replace entry IDs with your form's prefill IDs)
-    if (typeof window !== 'undefined') {
-      params.set('entry.123456', window.location.href) // Current page URL
-      params.set('entry.234567', navigator.userAgent) // Browser info
-    }
-    if (user?.email) params.set('entry.345678', user.email) // User email
-    if (language) params.set('entry.456789', language) // UI language
-    return `${base}?${params.toString()}`
-  }, [user?.email, language])
+    // Simple embed without prefill; manage required fields directly in Google Forms
+    return 'https://docs.google.com/forms/d/e/1FAIpQLSeJ4P5gt2TdOHaop48kZzS-Q5eK647Raks0XC2Q8GSNoayt8A/viewform?embedded=true'
+  }, [])
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark")
