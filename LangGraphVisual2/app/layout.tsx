@@ -12,7 +12,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "LangGraph GUI",
+  title: "LangGraph GUI ( BETA )",
   generator: "v0.dev",
 }
 

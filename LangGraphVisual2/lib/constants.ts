@@ -99,7 +99,7 @@ export const TOAST_CONFIG = {
 
 // Application metadata
 export const APP_CONFIG = {
-  NAME: 'LangGraph GUI',
+  NAME: 'LangGraph GUI ( BETA )',
   VERSION: '1.0.0',
   DESCRIPTION: 'A minimal GUI to visualize LangGraph graphs',
 } as const
@@ -108,7 +108,7 @@ export const APP_CONFIG = {
 export const TRANSLATIONS = {
   en: {
     // Header
-    "app.title": "LangGraph GUI",
+    "app.title": "LangGraph GUI ( BETA )",
     "app.description": "A minimal GUI to visualize LangGraph graphs.",
     "menu.templates": "Code Templates",
 
@@ -173,7 +173,7 @@ export const TRANSLATIONS = {
   },
   ko: {
     // Header
-    "app.title": "LangGraph GUI",
+    "app.title": "LangGraph GUI ( BETA )",
     "app.description": "LangGraph 그래프를 시각화하는 최소한의 플레이그라운드입니다.",
     "menu.templates": "코드 템플릿",
 

@@ -366,7 +366,7 @@ declare global {
   return (
     <div className={`flex flex-col h-full ${className}`}>
       {/* 헤더 */}
-      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur">
         {/* 첫 번째 줄 - 제목과 언어 선택 */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center space-x-3">
@@ -388,7 +388,7 @@ declare global {
           
           <button
             onClick={onMinimize}
-            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
+            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
             title="Minimize editor"
           >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
