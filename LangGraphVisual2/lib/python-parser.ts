@@ -273,8 +273,8 @@ function cleanIdentifier(identifier: string): string {
         cleaned = parts[parts.length - 1]
     }
     // Normalize special sentinels
-    if (cleaned === 'START') cleaned = '__start__'
-    if (cleaned === 'END') cleaned = '__end__'
+    if (cleaned === 'START') cleaned = 'START'
+    if (cleaned === 'END') cleaned = 'END'
     return cleaned.trim()
 }
 

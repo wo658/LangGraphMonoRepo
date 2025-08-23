@@ -1,11 +1,12 @@
 "use client"
 
-import { Moon, Sun, Globe } from "lucide-react"
+import { Moon, Sun, Globe, MessageSquare } from "lucide-react"
 import { useTheme } from "next-themes"
-import { useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 import {
   DropdownMenu,
@@ -24,6 +25,12 @@ export function AppHeader() {
   const { language, setLanguage, t } = useI18n()
   const { user, loading } = useAuth()
   const { loadMe, logout, loginWithGithub, loginWithGoogle } = useAuthActions()
+
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const formUrl = useMemo(() => {
+    // Simple embed without prefill; manage required fields directly in Google Forms
+    return 'https://docs.google.com/forms/d/e/1FAIpQLSeJ4P5gt2TdOHaop48kZzS-Q5eK647Raks0XC2Q8GSNoayt8A/viewform?embedded=true'
+  }, [])
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark")
@@ -85,6 +92,19 @@ export function AppHeader() {
             <span className="sr-only">Toggle theme</span>
           </Button>
 
+          {/* Feedback Button (desktop) */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="hidden md:inline-flex"
+            onClick={() => setFeedbackOpen(true)}
+            aria-label="Send feedback"
+            title="Send feedback"
+          >
+            <MessageSquare className="w-4 h-4 mr-2" />
+            Feedback
+          </Button>
+
           {/* Auth Controls (rightmost) */}
           {loading ? (
             <span className="text-sm text-slate-500">Loading...</span>
@@ -109,6 +129,8 @@ export function AppHeader() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {/* Feedback (menu, good for mobile) */}
+                <DropdownMenuItem onClick={() => setFeedbackOpen(true)}>Feedback</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => logout()}>Logout</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -120,6 +142,8 @@ export function AppHeader() {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Continue with</DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {/* Feedback (menu, good for mobile/guests) */}
+                <DropdownMenuItem onClick={() => setFeedbackOpen(true)}>Feedback</DropdownMenuItem>
                 <DropdownMenuItem onClick={loginWithGithub}>GitHub</DropdownMenuItem>
                 <DropdownMenuItem onClick={loginWithGoogle}>Google</DropdownMenuItem>
               </DropdownMenuContent>
@@ -127,6 +151,24 @@ export function AppHeader() {
           )}
         </div>
       </div>
+
+      {/* Feedback Dialog */}
+      <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
+        <DialogContent className="max-w-2xl w-[95vw] h-[85vh] p-0 overflow-hidden">
+          <DialogHeader className="px-4 pt-4 pb-2">
+            <DialogTitle>Feedback</DialogTitle>
+            <DialogDescription>Share a bug or idea. We may prefill page and environment data.</DialogDescription>
+          </DialogHeader>
+          <div className="px-0 pb-0 h-[calc(85vh-84px)]">
+            <iframe
+              src={formUrl}
+              className="w-full h-full border-0"
+              title="Feedback Form"
+              loading="lazy"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
