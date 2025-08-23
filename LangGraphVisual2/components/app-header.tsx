@@ -36,9 +36,13 @@ export function AppHeader() {
     setTheme(theme === "dark" ? "light" : "dark")
   }
   
-  // Load session on mount
+  // Load session on mount and set default language
   useEffect(() => {
     loadMe()
+    // Set default language to English
+    if (language !== "en") {
+      setLanguage("en")
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -62,8 +66,8 @@ export function AppHeader() {
         </div>
 
         <div className="flex items-center space-x-3">
-          {/* Language Selector */}
-          <DropdownMenu>
+          {/* Language Selector - Hidden but preserved for future use */}
+          {/* <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="min-w-[100px]">
                 <Globe className="w-4 h-4 mr-2" />
@@ -76,7 +80,7 @@ export function AppHeader() {
               <DropdownMenuItem onClick={() => setLanguage("en")}>English</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setLanguage("ko")}>한국어</DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu> */}
 
           {/* Theme Toggle Button */}
           <Button
@@ -129,8 +133,6 @@ export function AppHeader() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {/* Feedback (menu, good for mobile) */}
-                <DropdownMenuItem onClick={() => setFeedbackOpen(true)}>Feedback</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => logout()}>Logout</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -142,8 +144,6 @@ export function AppHeader() {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Continue with</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {/* Feedback (menu, good for mobile/guests) */}
-                <DropdownMenuItem onClick={() => setFeedbackOpen(true)}>Feedback</DropdownMenuItem>
                 <DropdownMenuItem onClick={loginWithGithub}>GitHub</DropdownMenuItem>
                 <DropdownMenuItem onClick={loginWithGoogle}>Google</DropdownMenuItem>
               </DropdownMenuContent>
