@@ -26,7 +26,8 @@ async function bootstrap() {
       // allow non-browser requests or same-origin
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error(`CORS blocked: ${origin}`), false);
+      console.log(`CORS blocked for origin: ${origin}, allowed: ${allowedOrigins.join(', ')}`);
+      return callback(null, false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
