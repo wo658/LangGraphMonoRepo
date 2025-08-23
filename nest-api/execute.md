@@ -48,7 +48,7 @@ npx serverless logs -f api -s prd -t
   ```bash
   npx serverless create_domain --stage prd
   npm run sls:deploy:prd
-  npm run sls:info
+  npx serverless info --stage prd
   ```
   - 삭제 시: `npx serverless delete_domain --stage prd`
 
@@ -95,15 +95,37 @@ npm run sls:deploy:prd
      npm run sls:deploy:prd
      ```
 
-- 간단 차선책(빠른 시도)
-  - 배포 전에 프로덕션 의존성만 남기기:
-    ```bash
-    npm ci --omit=dev
-    npm run build
-    npm run sls:deploy:prd
-    ```
-  - 불필요 대형 라이브러리 제거/외부화(레이어 사용)도 고려
+ 1. 실시간 로그 스트리밍 (tail)
 
-## 5) 참고
-- 리전을 서울로 바꾸려면 `serverless.yml`의 `provider.region`을 `ap-northeast-2`로 변경하고, ACM 인증서도 같은 리전에 발급하세요.
-- `AUTH_CALLBACK_BASE`가 커스텀 도메인과 일치해야 OAuth/리다이렉트가 정상 동작합니다.
+  npx serverless logs -f api --stage prd --tail
+
+  2. 최근 로그 확인
+
+  npx serverless logs -f api --stage prd
+
+  3. 특정 시간 범위 로그
+
+  # 지난 1시간
+  npx serverless logs -f api --stage prd --startTime 1h
+
+  # 지난 30분
+  npx serverless logs -f api --stage prd --startTime 30m
+
+  # 특정 시간부터
+  npx serverless logs -f api --stage prd --startTime 2025-08-23T10:00:00
+
+  4. 필터링된 로그
+
+  # 에러만 보기
+  npx serverless logs -f api --stage prd --filter ERROR
+
+  # 특정 문자열 포함
+  npx serverless logs -f api --stage prd --filter "authentication"
+
+  5. 배포 정보 확인
+
+  npx serverless info --stage prd
+
+  현재 배포된 API 엔드포인트:
+  - API Gateway: https://0njbb0wjw5.execute-api.us-east-1.amazonaws.com
+  - Custom Domain: https://api.langvis.com
