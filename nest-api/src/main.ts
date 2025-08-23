@@ -5,6 +5,14 @@ import * as cookieParser from 'cookie-parser';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
+  console.log('🚀 Starting NestJS application...');
+  console.log('Environment variables:');
+  console.log('PORT:', process.env.PORT);
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
+  console.log('FRONTEND_URLS:', process.env.FRONTEND_URLS);
+  console.log('MONGO_URI:', process.env.MONGO_URI ? 'SET' : 'NOT SET');
+  
   const app = await NestFactory.create(AppModule);
   
   // Trust proxy for correct protocol detection (Secure cookies behind Railway)
@@ -19,16 +27,12 @@ async function bootstrap() {
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);
+  
+  console.log('🌐 Allowed CORS origins:', allowedOrigins);
 
-  // Enable CORS for frontend
+  // Enable CORS - Allow all origins for now to debug
   app.enableCors({
-    origin: (origin, callback) => {
-      // allow non-browser requests or same-origin
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      console.log(`CORS blocked for origin: ${origin}, allowed: ${allowedOrigins.join(', ')}`);
-      return callback(null, false);
-    },
+    origin: true, // Allow all origins temporarily
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -48,6 +52,7 @@ async function bootstrap() {
   SwaggerModule.setup('api-docs', app, document);
   
   const port = process.env.PORT || 4000;
+  
   // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
@@ -56,7 +61,18 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+  
+  // Global error handling
+  process.on('uncaughtException', (error) => {
+    console.error('🚨 Uncaught Exception:', error);
+  });
+  
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason);
+  });
+  
   await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}`);
+  console.log(`🎉 Application is running on port: ${port}`);
+  console.log(`🌍 Access URL: http://localhost:${port}`);
 }
 bootstrap();
