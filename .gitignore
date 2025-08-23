@@ -31,3 +31,11 @@
 */test-results
 LangGraphVisual2/tsconfig.tsbuildinfo
 nest-api/tsconfig.tsbuildinfo
+nest-api/bundle
+nest-api/aws
+nest-api/.serverless/cloudformation-template-create-stack.json
+nest-api/.serverless/cloudformation-template-update-stack.json
+nest-api/.serverless/nest-api.zip
+nest-api/.serverless/serverless-state.json
+nest-api/nest-api.zip
+nest-api/awscliv2.zip

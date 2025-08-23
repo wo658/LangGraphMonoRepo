@@ -12,7 +12,7 @@ export type UserProfile = {
 }
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'https://api.langvis.com'
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'https://0njbb0wjw5.execute-api.us-east-1.amazonaws.com'
 
 // Fetch current user profile using HttpOnly cookie (credentials included)
 export async function fetchMe(): Promise<UserProfile | null> {

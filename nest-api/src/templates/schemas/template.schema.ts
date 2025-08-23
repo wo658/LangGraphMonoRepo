@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, Schema as MongooseSchema, Types } from 'mongoose';
 
 export type TemplateDocument = Template & Document;
 
@@ -17,10 +17,10 @@ export class Template {
   @Prop({ required: true, enum: ['python', 'typescript', 'javascript'] })
   language: 'python' | 'typescript' | 'javascript';
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   author: Types.ObjectId;
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
+  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'User' }], default: [] })
   likedBy: Types.ObjectId[];
   @Prop({ required: true, enum: ['public', 'private'], default: 'private' })
   visibility: 'public' | 'private';
