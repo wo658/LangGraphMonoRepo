@@ -10,11 +10,27 @@ provider:
   memorySize: 512
   timeout: 20
   httpApi:
-    cors: false
+    cors:
+      allowedOrigins:
+        - https://langvis.com
+        - https://www.langvis.com
+        - http://localhost:3000
+      allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+      allowCredentials: true
   environment:
     NODE_OPTIONS: --enable-source-maps
     AUTH_CALLBACK_BASE: https://api.langvis.com
     FRONTEND_URL: https://langvis.com
+    FRONTEND_URLS: https://langvis.com,https://www.langvis.com
     JWT_SECRET: ASDOsdsadkoo23219302asASDKO2042315wsadf4512w4e
     MONGO_URI: mongodb+srv://whdgns2347:YswNeRgrJ1neWdGL@langgraphproject.etir86a.mongodb.net/?retryWrites=true&w=majority&appName=LangGraphProject
     OPENROUTER_API_KEY: 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
