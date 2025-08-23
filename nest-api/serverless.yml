@@ -62,7 +62,7 @@ custom:
     domainName: api.langvis.com
     basePath: ''
     stage: prd
-    createRoute53Record: false
+    createRoute53Record: false  # Route 53 자동 생성 비활성화
     certificateName: 'api.langvis.com'
     endpointType: regional
     apiType: http

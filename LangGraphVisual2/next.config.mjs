@@ -17,7 +17,7 @@ const nextConfig = {
           {
             key: 'Content-Security-Policy',
             value:
-              "frame-src 'self' https://docs.google.com https://www.google.com https://*.google.com https://*.gstatic.com; child-src 'self' https://docs.google.com https://www.google.com https://*.google.com https://*.gstatic.com;",
+              "frame-src 'self' https://docs.google.com https://www.google.com https://*.google.com https://*.gstatic.com; child-src 'self' blob: https://docs.google.com https://www.google.com https://*.google.com https://*.gstatic.com; worker-src 'self' blob:;",
           },
         ],
       },
