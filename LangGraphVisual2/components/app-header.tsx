@@ -62,6 +62,9 @@ export function AppHeader() {
             <Link href="/templates">
               <Button variant="ghost" size="sm">Templates</Button>
             </Link>
+            <Link href="/docs">
+              <Button variant="ghost" size="sm">Docs</Button>
+            </Link>
           </nav>
         </div>
 
