@@ -4,6 +4,17 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 
+// Force static generation at build time
+export const dynamic = 'force-static'
+export const dynamicParams = false
+
+export async function generateStaticParams() {
+  return [
+    { lang: 'en' },
+    { lang: 'ko' },
+  ]
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang } = await params
   const isKo = lang?.toLowerCase() === "ko"

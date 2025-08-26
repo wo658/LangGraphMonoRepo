@@ -1,6 +1,17 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 
+// Force static generation at build time
+export const dynamic = 'force-static'
+export const dynamicParams = false
+
+export async function generateStaticParams() {
+  return [
+    { lang: 'en' },
+    { lang: 'ko' },
+  ]
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang } = await params
   const isKo = lang?.toLowerCase() === "ko"
