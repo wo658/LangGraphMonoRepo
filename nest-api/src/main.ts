@@ -71,8 +71,9 @@ async function bootstrap() {
     console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason);
   });
   
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`🎉 Application is running on port: ${port}`);
-  console.log(`🌍 Access URL: http://localhost:${port}`);
+  console.log(`🌍 Railway URL: https://api.langvis.com`);
+  console.log(`📡 Local access: http://localhost:${port}`);
 }
 bootstrap();
