@@ -3,6 +3,13 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 
+export async function generateStaticParams() {
+  return [
+    { lang: 'en' },
+    { lang: 'ko' },
+  ]
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang } = await params
   const isKo = lang?.toLowerCase() === "ko"
