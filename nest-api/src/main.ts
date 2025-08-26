@@ -30,9 +30,20 @@ async function bootstrap() {
   
   console.log('🌐 Allowed CORS origins:', allowedOrigins);
 
-  // Enable CORS - Allow all origins for now to debug
+  // Enable CORS with proper configuration
   app.enableCors({
-    origin: true, // Allow all origins temporarily
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+      
+      // Check if origin is in allowed list
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn(`🚫 Blocked CORS request from: ${origin}`);
+        callback(null, false);
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
