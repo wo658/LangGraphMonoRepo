@@ -51,7 +51,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api-docs', app, document);
   
-  const port = process.env.PORT || 4000;
+  const port = process.env.PORT || 8080;
   
   // Global validation pipe
   app.useGlobalPipes(
