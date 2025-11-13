@@ -2,7 +2,7 @@
 
 # dependencies
 */node_modules
-
+sh.sh
 # next.js
 */.next/
 */out/
